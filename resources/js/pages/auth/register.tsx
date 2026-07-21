@@ -9,12 +9,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthLayout from '@/layouts/auth-layout';
 
-interface RegisterForm {
+// Type alias rather than interface: useForm's FormDataType constraint needs an
+// implicit index signature, which interfaces do not provide.
+type RegisterForm = {
     name: string;
     email: string;
     password: string;
     password_confirmation: string;
-}
+};
 
 export default function Register() {
     const { data, setData, post, processing, errors, reset } = useForm<RegisterForm>({

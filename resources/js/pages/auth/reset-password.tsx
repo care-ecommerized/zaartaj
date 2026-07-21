@@ -13,12 +13,14 @@ interface ResetPasswordProps {
     email: string;
 }
 
-interface ResetPasswordForm {
+// Type alias rather than interface: useForm's FormDataType constraint needs an
+// implicit index signature, which interfaces do not provide.
+type ResetPasswordForm = {
     token: string;
     email: string;
     password: string;
     password_confirmation: string;
-}
+};
 
 export default function ResetPassword({ token, email }: ResetPasswordProps) {
     const { data, setData, post, processing, errors, reset } = useForm<ResetPasswordForm>({

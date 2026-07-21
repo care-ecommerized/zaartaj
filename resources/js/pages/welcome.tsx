@@ -1,5 +1,9 @@
 import { type SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
+import { type CSSProperties } from 'react';
+
+// 'plus-darker' is valid CSS but missing from React's MixBlendMode union.
+const plusDarker = { mixBlendMode: 'plus-darker' as string } as CSSProperties;
 
 export default function Welcome() {
     const { auth } = usePage<SharedData>().props;
@@ -218,7 +222,7 @@ export default function Welcome() {
                                     />
                                 </g>
                                 <g
-                                    style={{ mixBlendMode: 'plus-darker' }}
+                                    style={plusDarker}
                                     className="translate-y-0 opacity-100 transition-all delay-300 duration-750 starting:translate-y-4 starting:opacity-0"
                                 >
                                     <path

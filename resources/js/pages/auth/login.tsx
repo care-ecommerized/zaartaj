@@ -10,11 +10,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthLayout from '@/layouts/auth-layout';
 
-interface LoginForm {
+// Declared as a type alias, not an interface: useForm's FormDataType constraint
+// requires an implicit index signature, which interfaces do not provide.
+type LoginForm = {
     email: string;
     password: string;
     remember: boolean;
-}
+};
 
 interface LoginProps {
     status?: string;
