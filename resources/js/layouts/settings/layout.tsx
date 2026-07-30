@@ -21,6 +21,16 @@ const sidebarNavItems: NavItem[] = [
         url: '/settings/appearance',
         icon: null,
     },
+    {
+        title: 'Orders',
+        url: '/account/orders',
+        icon: null,
+    },
+    {
+        title: 'Addresses',
+        url: '/settings/addresses',
+        icon: null,
+    },
 ];
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {

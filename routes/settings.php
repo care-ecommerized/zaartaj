@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Settings\AddressController;
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -18,4 +19,10 @@ Route::middleware('auth')->group(function () {
     Route::get('settings/appearance', function () {
         return Inertia::render('settings/appearance');
     })->name('appearance');
+
+    // Saved delivery addresses, scoped to the signed-in customer.
+    Route::get('settings/addresses', [AddressController::class, 'index'])->name('addresses.index');
+    Route::post('settings/addresses', [AddressController::class, 'store'])->name('addresses.store');
+    Route::put('settings/addresses/{address}', [AddressController::class, 'update'])->name('addresses.update');
+    Route::delete('settings/addresses/{address}', [AddressController::class, 'destroy'])->name('addresses.destroy');
 });

@@ -5,6 +5,8 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import { route as routeFn } from 'ziggy-js';
 import { initializeTheme } from './hooks/use-appearance';
+import { I18nProvider } from './lib/i18n';
+import { CartProvider } from './lib/shop/cart';
 
 declare global {
     const route: typeof routeFn;
@@ -18,7 +20,15 @@ createInertiaApp({
     setup({ el, App, props }) {
         const root = createRoot(el);
 
-        root.render(<App {...props} />);
+        // The storefront cart lives at the root so it survives Inertia page
+        // visits and is available to pages that render outside ShopLayout.
+        root.render(
+            <I18nProvider>
+                <CartProvider>
+                    <App {...props} />
+                </CartProvider>
+            </I18nProvider>,
+        );
     },
     progress: {
         color: '#4B5563',

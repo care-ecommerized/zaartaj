@@ -156,3 +156,89 @@
         @apply bg-background text-foreground;
     }
 }
+
+/*
+  Zaartaj Elegance storefront theme.
+
+  The admin/auth side of the app keeps the neutral shadcn tokens above and its
+  light/dark toggle. The storefront deliberately does not participate in that
+  toggle — it commits to one palette, taken from the logo: teal gown, gold
+  lettering, cream ground.
+*/
+@theme {
+    --font-display: 'Cormorant Garamond', ui-serif, Georgia, serif;
+
+    --color-zt-teal: #12766e;
+    --color-zt-teal-deep: #0b4f49;
+    --color-zt-teal-soft: #7fc5bc;
+    --color-zt-teal-mist: #e4f0ee;
+    --color-zt-gold: #b8964a;
+    --color-zt-gold-light: #d9bd76;
+    --color-zt-cream: #fbf8f3;
+    --color-zt-sand: #f0e9dd;
+    --color-zt-ink: #1c2a28;
+    --color-zt-muted: #6b7b78;
+}
+
+@layer components {
+    /* Small uppercase label above a heading. */
+    .zt-eyebrow {
+        @apply text-zt-gold text-xs font-medium tracking-[0.28em] uppercase;
+    }
+
+    /* Thin gold rule used as a section divider. */
+    .zt-rule {
+        @apply from-zt-gold/0 via-zt-gold/60 to-zt-gold/0 h-px w-full bg-gradient-to-r;
+    }
+}
+
+/*
+  Arabic / RTL layer.
+
+  The storefront is authored with physical Tailwind utilities (left/right, -right-2),
+  so rather than a blanket physical→logical rewrite we mirror only the asymmetric
+  spots that read wrong when `dir="rtl"` is set on <html> (SetLocale/blade for AR).
+  Add new offenders here as pages grow; known-covered ones are listed below.
+*/
+
+/* Arabic webfaces: IBM Plex Sans Arabic for body/chrome, Amiri for display headings.
+   Higher specificity than the .font-sans / .font-display utilities so they win in RTL. */
+[dir='rtl'],
+[dir='rtl'] .font-sans {
+    font-family:
+        'IBM Plex Sans Arabic', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+[dir='rtl'] .font-display {
+    font-family: 'Amiri', 'Cormorant Garamond', ui-serif, Georgia, serif;
+}
+
+/* Cart badge: physical -right-2 pins it to the visual right; mirror to the left in RTL. */
+[dir='rtl'] .-right-2 {
+    right: auto;
+    left: -0.5rem;
+}
+
+/* Header nav hover underline grows from after:left-0; anchor it to the right edge in RTL. */
+[dir='rtl'] .after\:left-0::after {
+    left: auto;
+    right: 0;
+}
+
+/* Product-card "Sold out" badge sits top-left; move it to the top-right in RTL. */
+[dir='rtl'] .left-4 {
+    left: auto;
+    right: 1rem;
+}
+
+/* Value columns aligned to the right (order confirmation, product details) flip to the left. */
+[dir='rtl'] .text-right {
+    text-align: left;
+}
+
+/* Directional lucide glyphs (breadcrumb chevrons, CTA arrows) point the other way in RTL. */
+[dir='rtl'] .lucide-chevron-right,
+[dir='rtl'] .lucide-arrow-right {
+    transform: scaleX(-1);
+}

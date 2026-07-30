@@ -13,6 +13,12 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // Currencies underpin every price and payment, so they seed first.
+        $this->call(CurrencySeeder::class);
+
+        // Worldwide shipping zones and their AED rates.
+        $this->call(ShippingZoneSeeder::class);
+
         // User::factory(10)->create();
 
         User::factory()->create([
