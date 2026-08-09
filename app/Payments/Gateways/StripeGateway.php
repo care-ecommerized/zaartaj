@@ -5,6 +5,7 @@ namespace App\Payments\Gateways;
 use App\Models\Payment;
 use App\Payments\Contracts\HandlesWebhooks;
 use App\Payments\Contracts\PaymentGateway;
+use App\Payments\Contracts\SupportsEmbeddedCard;
 use App\Payments\Exceptions\PaymentException;
 use App\Payments\PaymentResult;
 use Illuminate\Http\Request;
@@ -12,14 +13,16 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Stripe Checkout Sessions (hosted redirect).
+ * Stripe — hosted Checkout Sessions (redirect) and embedded card via a
+ * PaymentIntent (on-page, using Stripe Elements).
  *
- * Flow: create a Checkout Session -> redirect to session.url -> customer returns
- * to our callback -> retrieve the session and confirm payment_status === 'paid'.
- * A checkout.session.completed webhook settles the payment even if the customer
- * never makes it back.
+ * Redirect flow: create a Checkout Session -> session.url -> callback ->
+ * retrieve and confirm payment_status === 'paid'.
+ * Embedded flow: create a PaymentIntent -> the browser confirms the card with
+ * the client_secret -> we settle when it reads 'succeeded'.
+ * Either way a webhook settles even if the customer never returns.
  */
-class StripeGateway implements HandlesWebhooks, PaymentGateway
+class StripeGateway implements HandlesWebhooks, PaymentGateway, SupportsEmbeddedCard
 {
     /**
      * @param  array<string, mixed>  $config
@@ -68,6 +71,34 @@ class StripeGateway implements HandlesWebhooks, PaymentGateway
         return $response['url'];
     }
 
+    public function prepareEmbedded(Payment $payment): array
+    {
+        $intent = $this->request('post', '/v1/payment_intents', [
+            'amount' => $this->minorUnits($payment),
+            'currency' => strtolower($payment->currency),
+            'description' => 'Order '.$payment->reference,
+            'automatic_payment_methods' => ['enabled' => 'true', 'allow_redirects' => 'never'],
+            'metadata' => ['payment_reference' => $payment->reference],
+        ]);
+
+        if (empty($intent['id']) || empty($intent['client_secret'])) {
+            throw PaymentException::fromGateway($this->name(), 'Unable to create a payment intent.', [
+                'error' => $intent['error']['message'] ?? null,
+            ]);
+        }
+
+        $payment->forceFill([
+            'gateway_payment_id' => $intent['id'],
+            'status' => Payment::STATUS_INITIATED,
+        ])->save();
+
+        return [
+            'provider' => 'stripe',
+            'client_secret' => $intent['client_secret'],
+            'publishable_key' => $this->config['publishable_key'],
+        ];
+    }
+
     public function finalize(Payment $payment, array $callback): PaymentResult
     {
         if (($callback['status'] ?? null) === 'cancel') {
@@ -81,6 +112,18 @@ class StripeGateway implements HandlesWebhooks, PaymentGateway
     {
         if (! $payment->gateway_payment_id) {
             return PaymentResult::failure('Payment was never registered with Stripe.');
+        }
+
+        // Embedded card payments are PaymentIntents (pi_…); hosted checkouts are
+        // Sessions (cs_…). Confirm each against its own endpoint.
+        if (str_starts_with($payment->gateway_payment_id, 'pi_')) {
+            $intent = $this->request('get', "/v1/payment_intents/{$payment->gateway_payment_id}");
+
+            if (($intent['status'] ?? null) === 'succeeded') {
+                return PaymentResult::success($intent['id'], $intent);
+            }
+
+            return PaymentResult::failure('Card payment was not completed.', $intent);
         }
 
         $session = $this->request('get', "/v1/checkout/sessions/{$payment->gateway_payment_id}");
@@ -101,13 +144,13 @@ class StripeGateway implements HandlesWebhooks, PaymentGateway
 
         $event = $request->json()->all();
 
-        if (($event['type'] ?? null) !== 'checkout.session.completed') {
+        // Hosted checkout completes as a session; embedded card as a PaymentIntent.
+        if (! in_array($event['type'] ?? null, ['checkout.session.completed', 'payment_intent.succeeded'], true)) {
             return null;
         }
 
-        $reference = $event['data']['object']['client_reference_id']
-            ?? $event['data']['object']['metadata']['payment_reference']
-            ?? null;
+        $object = $event['data']['object'] ?? [];
+        $reference = $object['client_reference_id'] ?? $object['metadata']['payment_reference'] ?? null;
 
         return $reference ? Payment::where('reference', $reference)->first() : null;
     }

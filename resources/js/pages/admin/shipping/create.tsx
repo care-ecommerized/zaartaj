@@ -1,5 +1,5 @@
-import { Head, useForm } from '@inertiajs/react';
-import AppLayout from '@/layouts/app-layout';
+﻿import { Head, useForm } from '@inertiajs/react';
+import AdminLayout from '@/layouts/admin-layout';
 import { ShippingZoneForm, type ZoneFormData } from '@/components/shipping-zone-form';
 import { type BreadcrumbItem } from '@/types';
 
@@ -28,7 +28,7 @@ export default function AdminShippingCreate({ methods, countryOptions }: Props) 
     };
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <AdminLayout>
             <Head title="New shipping zone" />
 
             <div className="flex flex-col gap-6 p-4">
@@ -45,6 +45,6 @@ export default function AdminShippingCreate({ methods, countryOptions }: Props) 
                     onSubmit={submit}
                 />
             </div>
-        </AppLayout>
+        </AdminLayout>
     );
 }

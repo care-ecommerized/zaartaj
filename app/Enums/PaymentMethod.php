@@ -42,7 +42,7 @@ enum PaymentMethod: string
             self::CashOnDelivery => 'Cash on delivery',
             self::Bkash => 'bKash',
             self::Nagad => 'Nagad',
-            self::Stripe => 'Card (Stripe)',
+            self::Stripe => 'Credit card',
             self::Tap => 'Card / Apple Pay (Tap)',
             self::Tabby => 'Tabby — pay in 4',
             self::Tamara => 'Tamara — pay later',

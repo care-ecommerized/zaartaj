@@ -1,6 +1,6 @@
-import { Head } from '@inertiajs/react';
+﻿import { Head } from '@inertiajs/react';
 import { ShoppingCart } from 'lucide-react';
-import AppLayout from '@/layouts/app-layout';
+import AdminLayout from '@/layouts/admin-layout';
 import { type BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Abandoned', href: '/admin/abandoned' }];
@@ -33,12 +33,12 @@ interface Props {
 }
 
 function formatMoney(amount: number | null, code: string): string {
-    if (amount === null) return '—';
+    if (amount === null) return 'â€”';
     return `${code} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function formatWhen(iso: string | null): string {
-    return iso ? new Date(iso).toLocaleString() : '—';
+    return iso ? new Date(iso).toLocaleString() : 'â€”';
 }
 
 function StatCard({ label, value }: { label: string; value: string | number }) {
@@ -54,7 +54,7 @@ export default function AdminAbandonedIndex({ sessions, baseCurrency, presentmen
     const showPresentment = presentmentCurrency !== baseCurrency;
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <AdminLayout>
             <Head title="Abandoned checkouts" />
 
             <div className="flex flex-col gap-6 p-4">
@@ -69,7 +69,7 @@ export default function AdminAbandonedIndex({ sessions, baseCurrency, presentmen
                     <StatCard label="Open" value={metrics.open} />
                     <StatCard label="Converted" value={metrics.converted} />
                     <StatCard label="Abandoned" value={metrics.abandoned} />
-                    <StatCard label="Conversion" value={metrics.conversion_rate === null ? '—' : `${metrics.conversion_rate}%`} />
+                    <StatCard label="Conversion" value={metrics.conversion_rate === null ? 'â€”' : `${metrics.conversion_rate}%`} />
                 </div>
 
                 <div className="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border">
@@ -91,7 +91,7 @@ export default function AdminAbandonedIndex({ sessions, baseCurrency, presentmen
                                         <div className="flex items-center gap-2">
                                             <ShoppingCart className="text-muted-foreground size-4" />
                                             <div>
-                                                <p className="font-medium">{session.email ?? '—'}</p>
+                                                <p className="font-medium">{session.email ?? 'â€”'}</p>
                                                 {session.phone && <p className="text-muted-foreground text-xs">{session.phone}</p>}
                                             </div>
                                         </div>
@@ -136,6 +136,6 @@ export default function AdminAbandonedIndex({ sessions, baseCurrency, presentmen
                     </table>
                 </div>
             </div>
-        </AppLayout>
+        </AdminLayout>
     );
 }

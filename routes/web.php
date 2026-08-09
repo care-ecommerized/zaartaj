@@ -29,6 +29,9 @@ Route::post('locale', [LocaleController::class, 'set'])->name('locale.set');
 // Checkout. The cart is client-side, so `store` receives the lines with the order.
 Route::get('checkout', [CheckoutController::class, 'show'])->name('checkout.show');
 Route::post('checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+// Embedded card: places the order and returns a client_secret so the card is
+// confirmed on-page (Stripe Elements / Tap) instead of via a hosted redirect.
+Route::post('checkout/card', [CheckoutController::class, 'card'])->name('checkout.card');
 // Promo code: applied against the current bag (subtotal re-priced server-side)
 // and held in the session for `store` to redeem, or cleared.
 // Abandoned-checkout capture: a debounced, no-content ping that upserts the

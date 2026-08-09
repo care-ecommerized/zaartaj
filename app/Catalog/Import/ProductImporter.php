@@ -50,7 +50,14 @@ class ProductImporter
 
             $product->fill([
                 'title' => $row['Title'] ?? $group->handle,
+                // Optional Arabic siblings — only mapped when the export carries them.
+                // When the column is absent the existing value is kept, so a standard
+                // Shopify re-import never wipes Arabic copy an admin entered by hand.
+                'title_ar' => $row['title_ar'] ?? $product->title_ar,
                 'body_html' => $this->sanitizer->clean($row['Body (HTML)'] ?? null),
+                'body_html_ar' => isset($row['body_html_ar'])
+                    ? $this->sanitizer->clean($row['body_html_ar'])
+                    : $product->body_html_ar,
                 'vendor' => $row['Vendor'] ?? null,
                 'product_type' => $row['Type'] ?? null,
                 'category_id' => $category?->id,

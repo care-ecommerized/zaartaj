@@ -6,6 +6,16 @@ export interface Auth {
     isAdmin: boolean;
 }
 
+/** Admin-shell notification counters; null for guests and customers. */
+export interface AdminBadges {
+    /** Orders awaiting staff confirmation. */
+    pendingOrders: number;
+    /** Open checkout sessions worth chasing. */
+    openCheckouts: number;
+    /** Sum of the above — the bell badge count. */
+    total: number;
+}
+
 export interface BreadcrumbItem {
     title: string;
     href: string;
@@ -36,12 +46,30 @@ export interface CurrencyOption extends ActiveCurrency {
     rate_to_base: number;
 }
 
+/** Store identity + contact + social links, all editable from admin Settings. */
+export interface StoreSettings {
+    'store.name': string;
+    'store.email': string;
+    'store.phone': string;
+    'store.address': string;
+    'store.city': string;
+    'store.country': string;
+    'social.facebook': string;
+    'social.instagram': string;
+    'social.youtube': string;
+    'social.linkedin': string;
+}
+
 export interface SharedData {
     name: string;
     quote: { message: string; author: string };
     auth: Auth;
+    /** Admin-shell notification counters; null unless the viewer is an admin. */
+    adminBadges: AdminBadges | null;
     /** Top-level shop categories, for the header and footer navigation. */
-    shopCategories: { slug: string; name: string }[];
+    shopCategories: { slug: string; name: string; image?: string | null }[];
+    /** Store identity, contact and social links, editable from admin Settings. */
+    storeSettings: StoreSettings;
     /** The active presentment currency prices are shown in. */
     currency: ActiveCurrency;
     /** The currencies the header selector offers. */
@@ -52,7 +80,17 @@ export interface SharedData {
     direction: 'ltr' | 'rtl';
     /** Flat message catalogue for the active locale (key → string). */
     translations: Record<string, string>;
+    /** Public config for the Tabby/Tamara BNPL promo widgets. */
+    bnpl: BnplConfig;
     [key: string]: unknown;
+}
+
+/** Public (non-secret) config the BNPL promo widgets need on the client. */
+export interface BnplConfig {
+    /** Currency the widgets quote in (must be one the provider supports, e.g. AED). */
+    currency: string;
+    tabby: { publicKey: string; merchantCode: string };
+    tamara: { publicKey: string; country: string; lang: string };
 }
 
 export interface User {

@@ -9,48 +9,77 @@ use Illuminate\Database\Seeder;
 /**
  * Seed the worldwide shipping zones and their rates.
  *
- * All amounts are in the AED base currency. The figures below are sensible
- * launch defaults — TUNE THEM IN ADMIN once the catalogue re-base settles the
- * real AED price points. Idempotent: zones key on name and their rates are
- * rewritten on every run so edits here stay authoritative until staff override.
+ * All amounts are stored in the AED base currency. Bangladesh is quoted in taka
+ * (inside Dhaka ৳80, outside ৳180) and converted here at the seeded BDT rate
+ * (1 AED = 33 BDT), so a BD customer paying in taka is charged ≈ those figures.
+ * Free delivery over ৳15,000 (≈ 455 AED) is preserved for Bangladesh.
  *
- * Bangladesh note: the pre-Phase-C store priced BD as a flat ~60/120 BDT with
- * free delivery over ৳15,000. Re-expressed in AED that is a small flat charge
- * with free delivery over ~455 AED (15,000 / 33). The district split (inside vs
- * outside Dhaka) is intentionally dropped — zones price by country, and staff
- * can add finer BD rates in admin if needed.
+ * Bangladesh is split into two district-scoped zones (inside vs outside Dhaka)
+ * because a country-wide zone cannot price by district. Staff can edit every
+ * rate from the admin Shipping section. Idempotent: zones key on name and their
+ * rates are rewritten on each run so these figures stay authoritative until
+ * overridden in admin.
  */
 class ShippingZoneSeeder extends Seeder
 {
+    /** Taka per 1 AED, matching the seeded BDT currency rate. */
+    private const BDT_PER_AED = 33;
+
     public function run(): void
     {
+        $bdt = fn (float $taka): float => round($taka / self::BDT_PER_AED, 2);
+
         $zones = [
             [
-                'name' => 'Bangladesh',
-                'countries' => ['BD'],
+                'name' => 'UAE',
+                'countries' => ['AE'],
+                'districts' => null,
                 'priority' => 100,
                 'rates' => [
-                    // Flat ~5 AED (≈ ৳165) with free delivery over ~455 AED
-                    // (≈ ৳15,000). Tune the exact BD figures in admin.
-                    ['method' => ShippingRate::METHOD_FLAT, 'amount' => 5, 'free_over' => 455],
+                    ['method' => ShippingRate::METHOD_FLAT, 'amount' => 25],
                 ],
             ],
             [
                 'name' => 'GCC',
-                'countries' => ['AE', 'SA', 'QA', 'KW', 'OM', 'BH'],
+                'countries' => ['SA', 'QA', 'KW', 'OM', 'BH'],
+                'districts' => null,
                 'priority' => 50,
                 'rates' => [
-                    ['method' => ShippingRate::METHOD_FLAT, 'amount' => 25, 'free_over' => 500],
+                    ['method' => ShippingRate::METHOD_FLAT, 'amount' => 120],
+                ],
+            ],
+            [
+                // Inside Dhaka: ৳80. Higher priority than the outside-Dhaka zone so
+                // a Dhaka address resolves here first.
+                'name' => 'Bangladesh — Inside Dhaka',
+                'countries' => ['BD'],
+                'districts' => ['Dhaka'],
+                'priority' => 120,
+                'rates' => [
+                    ['method' => ShippingRate::METHOD_FLAT, 'amount' => $bdt(80), 'free_over' => $bdt(15000)],
+                ],
+            ],
+            [
+                // Everywhere else in Bangladesh: ৳180. No district scope, so it is
+                // the country-wide BD fallback for any non-Dhaka district.
+                'name' => 'Bangladesh — Outside Dhaka',
+                'countries' => ['BD'],
+                'districts' => null,
+                'priority' => 110,
+                'rates' => [
+                    ['method' => ShippingRate::METHOD_FLAT, 'amount' => $bdt(180), 'free_over' => $bdt(15000)],
                 ],
             ],
             [
                 // Catch-all: an empty country list prices any destination no other
-                // zone claims. Kept lowest priority so it never shadows a real zone.
+                // zone claims (International). Kept lowest priority so it never
+                // shadows a real zone.
                 'name' => 'Rest of World',
                 'countries' => [],
+                'districts' => null,
                 'priority' => 0,
                 'rates' => [
-                    ['method' => ShippingRate::METHOD_FLAT, 'amount' => 80, 'free_over' => null],
+                    ['method' => ShippingRate::METHOD_FLAT, 'amount' => 250],
                 ],
             ],
         ];
@@ -60,6 +89,7 @@ class ShippingZoneSeeder extends Seeder
                 ['name' => $definition['name']],
                 [
                     'countries' => $definition['countries'],
+                    'districts' => $definition['districts'],
                     'priority' => $definition['priority'],
                     'is_active' => true,
                 ],
@@ -79,5 +109,9 @@ class ShippingZoneSeeder extends Seeder
                 ]);
             }
         }
+
+        // Remove the pre-split Bangladesh zone from earlier seeds so it does not
+        // shadow the new inside/outside-Dhaka zones.
+        ShippingZone::where('name', 'Bangladesh')->delete();
     }
 }

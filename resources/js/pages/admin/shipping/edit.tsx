@@ -1,5 +1,5 @@
-import { Head, useForm } from '@inertiajs/react';
-import AppLayout from '@/layouts/app-layout';
+﻿import { Head, useForm } from '@inertiajs/react';
+import AdminLayout from '@/layouts/admin-layout';
 import { ShippingZoneForm, type RateRow, type ZoneFormData } from '@/components/shipping-zone-form';
 import { type BreadcrumbItem } from '@/types';
 
@@ -38,7 +38,7 @@ export default function AdminShippingEdit({ zone, methods, countryOptions }: Pro
     };
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <AdminLayout>
             <Head title={`Edit ${zone.name}`} />
 
             <div className="flex flex-col gap-6 p-4">
@@ -55,6 +55,6 @@ export default function AdminShippingEdit({ zone, methods, countryOptions }: Pro
                     onSubmit={submit}
                 />
             </div>
-        </AppLayout>
+        </AdminLayout>
     );
 }

@@ -158,26 +158,31 @@
 }
 
 /*
-  Zaartaj Elegance storefront theme.
+  Zaartaj Elegance storefront theme — "Bordeaux & Gold".
 
-  The admin/auth side of the app keeps the neutral shadcn tokens above and its
-  light/dark toggle. The storefront deliberately does not participate in that
-  toggle — it commits to one palette, taken from the logo: teal gown, gold
-  lettering, cream ground.
+  The admin/auth side keeps the neutral shadcn tokens above and its light/dark
+  toggle. The storefront commits to one palette: deep wine + champagne gold on
+  warm ivory. The token names still read `zt-teal*` for continuity across the
+  components; only their VALUES changed, so retheming is a single edit here.
 */
 @theme {
     --font-display: 'Cormorant Garamond', ui-serif, Georgia, serif;
 
-    --color-zt-teal: #12766e;
-    --color-zt-teal-deep: #0b4f49;
-    --color-zt-teal-soft: #7fc5bc;
-    --color-zt-teal-mist: #e4f0ee;
-    --color-zt-gold: #b8964a;
-    --color-zt-gold-light: #d9bd76;
-    --color-zt-cream: #fbf8f3;
-    --color-zt-sand: #f0e9dd;
-    --color-zt-ink: #1c2a28;
-    --color-zt-muted: #6b7b78;
+    /* Primary "brand" ramp — deep wine → berry → soft rose → pale blush. */
+    --color-zt-teal: #7b2d4e; /* berry (primary buttons, links) */
+    --color-zt-teal-deep: #591b32; /* deep bordeaux (hero, footer) */
+    --color-zt-teal-soft: #d98ba6; /* soft rose */
+    --color-zt-teal-mist: #f7e7ee; /* pale blush wash */
+
+    /* Champagne gold accent. */
+    --color-zt-gold: #c19a3f;
+    --color-zt-gold-light: #e7c97a;
+
+    /* Grounds & ink. */
+    --color-zt-cream: #fcf5f1; /* warm ivory page bg */
+    --color-zt-sand: #f2e6de; /* blush-sand panels */
+    --color-zt-ink: #2a141f; /* plum-ink text */
+    --color-zt-muted: #8a6f79; /* muted mauve */
 }
 
 @layer components {

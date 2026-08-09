@@ -1,6 +1,6 @@
-import { Head, router } from '@inertiajs/react';
+﻿import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
-import AppLayout from '@/layouts/app-layout';
+import AdminLayout from '@/layouts/admin-layout';
 import { type BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Currencies', href: '/admin/currencies' }];
@@ -64,7 +64,7 @@ function CurrencyRow({ currency }: { currency: AdminCurrency }) {
                     {currency.is_base && <span className="bg-muted text-muted-foreground ml-2 rounded-full px-2 py-0.5 text-xs">base</span>}
                 </div>
                 <p className="text-muted-foreground text-xs">
-                    {currency.symbol} · {currency.name} · {currency.decimals} dp
+                    {currency.symbol} Â· {currency.name} Â· {currency.decimals} dp
                 </p>
             </td>
             <td className="px-4 py-3 text-right">
@@ -99,7 +99,7 @@ function CurrencyRow({ currency }: { currency: AdminCurrency }) {
                 />
             </td>
             <td className="text-muted-foreground px-4 py-3 text-sm">
-                {currency.rate_updated_at ? new Date(currency.rate_updated_at).toLocaleString() : '—'}
+                {currency.rate_updated_at ? new Date(currency.rate_updated_at).toLocaleString() : 'â€”'}
             </td>
             <td className="px-4 py-3 text-right">
                 <button
@@ -108,7 +108,7 @@ function CurrencyRow({ currency }: { currency: AdminCurrency }) {
                     disabled={currency.is_base || !dirty || saving}
                     className="bg-primary text-primary-foreground rounded-lg px-3 py-1.5 text-sm font-medium disabled:opacity-40"
                 >
-                    {saving ? 'Saving…' : 'Save'}
+                    {saving ? 'Savingâ€¦' : 'Save'}
                 </button>
             </td>
         </tr>
@@ -117,7 +117,7 @@ function CurrencyRow({ currency }: { currency: AdminCurrency }) {
 
 export default function AdminCurrenciesIndex({ currencies }: Props) {
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <AdminLayout>
             <Head title="Currencies" />
 
             <div className="flex flex-col gap-6 p-4">
@@ -149,6 +149,6 @@ export default function AdminCurrenciesIndex({ currencies }: Props) {
                     </table>
                 </div>
             </div>
-        </AppLayout>
+        </AdminLayout>
     );
 }

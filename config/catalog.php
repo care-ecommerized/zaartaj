@@ -20,6 +20,30 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Product media uploads
+    |--------------------------------------------------------------------------
+    |
+    | Limits for the media an admin attaches by hand on the product screens.
+    | Videos share the image disk unless pointed elsewhere — a clip is large
+    | enough that an object store is often the better home for it.
+    |
+    | The video ceiling is only ever as high as PHP allows: `upload_max_filesize`
+    | and `post_max_size` in php.ini have to be at least this large, or the
+    | request is truncated before Laravel ever validates it.
+    |
+    */
+
+    'video_disk' => env('CATALOG_VIDEO_DISK', env('CATALOG_IMAGE_DISK', 'public')),
+
+    // Kilobytes, matching Laravel's `max:` rule.
+    'image_max_kb' => (int) env('CATALOG_IMAGE_MAX_KB', 5120),
+    'video_max_kb' => (int) env('CATALOG_VIDEO_MAX_KB', 102400),
+
+    // How many images one upload request may carry.
+    'image_batch_max' => (int) env('CATALOG_IMAGE_BATCH_MAX', 20),
+
+    /*
+    |--------------------------------------------------------------------------
     | Storefront categories
     |--------------------------------------------------------------------------
     |

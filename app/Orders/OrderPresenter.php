@@ -2,6 +2,7 @@
 
 namespace App\Orders;
 
+use App\Enums\OrderStatus;
 use App\Models\Order;
 use Throwable;
 
@@ -56,6 +57,85 @@ class OrderPresenter
             ])->all(),
             // A compact shipment/tracking summary when the relation is present.
             'shipment' => $this->shipment($order),
+        ];
+    }
+
+    /**
+     * The richer shape the admin order-detail console renders: everything the
+     * customer sees, plus staff-only context — the payments ledger, the full
+     * shipment/tracking record, the activity timeline, and the manual status
+     * transitions staff may apply next.
+     *
+     * @return array<string, mixed>
+     */
+    public function presentForAdmin(Order $order): array
+    {
+        $order->loadMissing(['items', 'payments', 'shipment', 'events', 'user']);
+
+        $machine = app(OrderStateMachine::class);
+        $status = $order->status instanceof OrderStatus ? $order->status : OrderStatus::from((string) $order->status);
+
+        return array_merge($this->present($order), [
+            'id' => $order->id,
+            'note' => $order->note,
+            'base_currency' => $order->base_currency,
+            'fx_rate' => (float) $order->fx_rate,
+            'user' => $order->user === null ? null : [
+                'id' => $order->user->id,
+                'name' => $order->user->name,
+                'email' => $order->user->email,
+            ],
+            'payments' => $order->payments->map(fn ($payment) => [
+                'gateway' => $payment->gateway,
+                'reference' => $payment->reference,
+                'amount' => (float) $payment->amount,
+                'currency' => $payment->currency,
+                'status' => $payment->status,
+                'gateway_transaction_id' => $payment->gateway_transaction_id,
+                'paid_at' => $payment->paid_at?->toIso8601String(),
+            ])->all(),
+            'admin_shipment' => $this->adminShipment($order),
+            'events' => $order->events->map(fn ($event) => [
+                'id' => $event->id,
+                'type' => $event->type,
+                'title' => $event->title,
+                'body' => $event->body,
+                'from_status' => $event->from_status,
+                'to_status' => $event->to_status,
+                'actor_type' => $event->actor_type,
+                'actor_name' => $event->actor_name,
+                'created_at' => $event->created_at?->toIso8601String(),
+            ])->all(),
+            'allowed_transitions' => array_map(
+                fn (OrderStatus $to) => $to->value,
+                $machine->allowedTransitions($status),
+            ),
+            'can_confirm' => $status === OrderStatus::Pending,
+            'is_dispatchable' => $status->isDispatchable(),
+        ]);
+    }
+
+    /**
+     * The full shipment/tracking record for staff — including the courier
+     * consignment id the customer-facing summary omits.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function adminShipment(Order $order): ?array
+    {
+        $shipment = $order->relationLoaded('shipment') ? $order->getRelation('shipment') : $order->shipment;
+
+        if ($shipment === null) {
+            return null;
+        }
+
+        return [
+            'courier' => $shipment->courier,
+            'consignment_id' => $shipment->consignment_id,
+            'tracking_code' => $shipment->tracking_code,
+            'status' => $shipment->status instanceof \BackedEnum ? $shipment->status->value : $shipment->status,
+            'dispatched_at' => $shipment->dispatched_at?->toIso8601String(),
+            'delivered_at' => $shipment->delivered_at?->toIso8601String(),
         ];
     }
 

@@ -27,13 +27,23 @@ class ShopController extends Controller
                 ->orderByDesc('total_inventory')
                 ->first();
 
+        // The home rails only ever show products that carry a real photo — a
+        // product with no renderable image is skipped so no blank tile appears.
+        $withPhoto = fn (Builder $query): Builder => $query->whereHas('images', fn (Builder $q) => $q->renderable());
+
         return Inertia::render('shop/home', [
             'hero' => $hero ? $this->presenter->card($hero) : null,
-            'featured' => $this->cards(
-                $this->published()->orderByDesc('total_inventory')->limit(4)->get()
+            // Newest by id — freshly added products lead this rail.
+            'newArrivals' => $this->cards(
+                $withPhoto($this->published())->latest('id')->limit(12)->get()
             ),
-            'newest' => $this->cards(
-                $this->published()->latest('id')->limit(8)->get()
+            // Highest stock stands in for "best selling" until order data drives it.
+            'bestSelling' => $this->cards(
+                $withPhoto($this->published())->orderByDesc('total_inventory')->limit(12)->get()
+            ),
+            // Statement pieces: the priciest published products.
+            'featured' => $this->cards(
+                $withPhoto($this->published())->orderByDesc('min_price')->limit(8)->get()
             ),
         ]);
     }

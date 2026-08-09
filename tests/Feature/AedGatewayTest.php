@@ -214,6 +214,80 @@ class AedGatewayTest extends TestCase
         $this->assertSame(Order::PAYMENT_PAID, $order->refresh()->payment_status);
     }
 
+    public function test_stripe_prepares_an_embedded_payment_intent(): void
+    {
+        Http::fake([
+            'stripe.test/v1/payment_intents' => Http::response(['id' => 'pi_1', 'client_secret' => 'pi_1_secret_x']),
+        ]);
+
+        $order = $this->order();
+        $config = app(PaymentInitiator::class)->startEmbeddedForOrder($order, 'stripe', null);
+
+        $this->assertSame('stripe', $config['provider']);
+        $this->assertSame('pi_1_secret_x', $config['client_secret']);
+        $this->assertSame('pk_test', $config['publishable_key']);
+
+        $payment = Payment::firstOrFail();
+        $this->assertSame($payment->id, $config['payment_id']);
+        $this->assertSame('AED', $payment->currency);
+        $this->assertSame('100.00', $payment->amount);
+        $this->assertSame('pi_1', $payment->gateway_payment_id);
+
+        // The intent is created in minor units (fils): 100.00 AED -> 10000.
+        Http::assertSent(fn ($request) => $request->url() === 'https://stripe.test/v1/payment_intents'
+            && (int) $request['amount'] === 10000
+            && $request['currency'] === 'aed');
+    }
+
+    public function test_tap_supports_embedded_card_entry(): void
+    {
+        $order = $this->order();
+        $config = app(PaymentInitiator::class)->startEmbeddedForOrder($order, 'tap', null);
+
+        $this->assertSame('tap', $config['provider']);
+        $this->assertSame('pk_tap', $config['publishable_key']);
+
+        $payment = Payment::firstOrFail();
+        $this->assertSame('AED', $payment->currency);
+        $this->assertSame('100.00', $payment->amount);
+        $this->assertSame(Payment::STATUS_INITIATED, $payment->status);
+    }
+
+    public function test_stripe_reconcile_settles_a_succeeded_payment_intent(): void
+    {
+        Http::fake([
+            'stripe.test/v1/payment_intents/pi_9' => Http::response(['id' => 'pi_9', 'status' => 'succeeded']),
+        ]);
+
+        $payment = $this->aedPayment('stripe', 'pi_9');
+
+        $this->post(route('payments.reconcile', $payment));
+
+        $payment->refresh();
+        $this->assertTrue($payment->isPaid());
+        $this->assertSame('pi_9', $payment->gateway_transaction_id);
+    }
+
+    public function test_stripe_payment_intent_webhook_settles(): void
+    {
+        Http::fake([
+            'stripe.test/v1/payment_intents/pi_7' => Http::response(['id' => 'pi_7', 'status' => 'succeeded']),
+        ]);
+
+        $payment = $this->aedPayment('stripe', 'pi_7');
+
+        $event = ['type' => 'payment_intent.succeeded', 'data' => ['object' => ['metadata' => ['payment_reference' => $payment->reference]]]];
+        $payload = json_encode($event);
+        $t = now()->timestamp;
+        $sig = hash_hmac('sha256', $t.'.'.$payload, 'whsec_test');
+
+        $this->call('POST', route('payments.webhook', ['gateway' => 'stripe']), [], [], [], [
+            'HTTP_STRIPE_SIGNATURE' => "t={$t},v1={$sig}", 'CONTENT_TYPE' => 'application/json',
+        ], $payload)->assertOk();
+
+        $this->assertTrue($payment->refresh()->isPaid());
+    }
+
     private function aedPayment(string $gateway, string $gatewayPaymentId): Payment
     {
         return Payment::create([

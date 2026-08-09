@@ -1,6 +1,7 @@
 import { Link, router } from '@inertiajs/react';
 import { Check, ChevronRight, Minus, Plus } from 'lucide-react';
 import { useState } from 'react';
+import BnplWidgets from '@/components/shop/bnpl-widgets';
 import { ProductCard } from '@/components/shop/product-card';
 import { ProductFigure } from '@/components/shop/product-figure';
 import ShopLayout from '@/layouts/shop-layout';
@@ -93,6 +94,10 @@ export default function ProductPage({ product, related }: ProductPageProps) {
                             <span className="text-zt-ink text-2xl">{formatTaka(product.price)}</span>
                             {product.compareAtPrice ? <span className="text-zt-muted/70 text-base line-through">{formatTaka(product.compareAtPrice)}</span> : null}
                         </p>
+
+                        {/* Tabby / Tamara pay-in-instalments messaging for this price. */}
+                        <BnplWidgets amount={product.price} />
+
 
                         <p className={`mt-2 text-xs tracking-[0.14em] uppercase ${product.inStock ? 'text-zt-teal' : 'text-zt-muted'}`}>
                             {product.inStock ? t('product.in_stock', { count: product.totalInventory }) : t('product.sold_out')}

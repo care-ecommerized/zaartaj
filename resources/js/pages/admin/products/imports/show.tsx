@@ -1,6 +1,6 @@
-import { Head, Link, router } from '@inertiajs/react';
+﻿import { Head, Link, router } from '@inertiajs/react';
 import { useEffect } from 'react';
-import AppLayout from '@/layouts/app-layout';
+import AdminLayout from '@/layouts/admin-layout';
 import { type BreadcrumbItem } from '@/types';
 import { ImportStatusBadge, type ImportStatus } from './status-badge';
 
@@ -60,15 +60,15 @@ export default function ImportShow({ import: record, failedRows }: Props) {
     ];
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title={`Import — ${record.filename}`} />
+        <AdminLayout>
+            <Head title={`Import â€” ${record.filename}`} />
 
             <div className="flex flex-col gap-6 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <div>
                         <h1 className="text-2xl font-semibold">{record.filename}</h1>
                         <p className="text-muted-foreground mt-1 text-sm">
-                            {running ? 'Processing — this page refreshes itself.' : `Finished ${record.finished_at ? new Date(record.finished_at).toLocaleString() : ''}`}
+                            {running ? 'Processing â€” this page refreshes itself.' : `Finished ${record.finished_at ? new Date(record.finished_at).toLocaleString() : ''}`}
                         </p>
                     </div>
 
@@ -113,7 +113,7 @@ export default function ImportShow({ import: record, failedRows }: Props) {
                                     {failedRows.data.map((row) => (
                                         <tr key={row.id} className="border-sidebar-border/70 border-t align-top">
                                             <td className="px-4 py-3 tabular-nums">{row.line_number}</td>
-                                            <td className="px-4 py-3 font-mono text-xs">{row.handle ?? '—'}</td>
+                                            <td className="px-4 py-3 font-mono text-xs">{row.handle ?? 'â€”'}</td>
                                             <td className="px-4 py-3 text-red-600">{row.message}</td>
                                         </tr>
                                     ))}
@@ -123,6 +123,6 @@ export default function ImportShow({ import: record, failedRows }: Props) {
                     </div>
                 )}
             </div>
-        </AppLayout>
+        </AdminLayout>
     );
 }

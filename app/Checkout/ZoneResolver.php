@@ -6,36 +6,59 @@ use App\Models\ShippingZone;
 use Illuminate\Support\Collection;
 
 /**
- * Maps a destination country to the shipping zone that prices it.
+ * Maps a destination (country + optional district) to the shipping zone that
+ * prices it.
  *
- * A country-specific zone always beats the catch-all, and the highest-priority
- * active zone wins when several claim the same country. When nothing at all
- * matches — no country zone and no catch-all — the resolver returns null and the
- * caller falls back to a configured default, so no destination is un-shippable.
+ * Resolution order, most specific first:
+ *   1. A zone that covers the country AND names the district (e.g. inside Dhaka).
+ *   2. A country-wide zone (covers the country, no district scope).
+ *   3. The catch-all zone (no countries at all).
+ *   4. null — the caller falls back to a configured default, so no destination
+ *      is ever un-shippable.
+ *
+ * Within each tier the highest-priority active zone wins.
  */
 class ZoneResolver
 {
-    public function forCountry(string $iso2): ?ShippingZone
+    public function forDestination(string $iso2, ?string $district = null): ?ShippingZone
     {
         $iso2 = strtoupper(trim($iso2));
 
         $zones = $this->activeZones();
 
-        // A zone that names the country, highest priority first.
-        $match = $zones
-            ->filter(fn (ShippingZone $zone) => $zone->covers($iso2))
+        // 1. A district-scoped zone for this country that names the district.
+        $districtMatch = $zones
+            ->filter(fn (ShippingZone $zone) => $zone->covers($iso2) && $zone->coversDistrict($district))
             ->sortByDesc('priority')
             ->first();
 
-        if ($match) {
-            return $match;
+        if ($districtMatch) {
+            return $districtMatch;
         }
 
-        // Otherwise the catch-all: an active zone that lists no countries.
+        // 2. A country-wide zone for this country (no district scope).
+        $countryMatch = $zones
+            ->filter(fn (ShippingZone $zone) => $zone->covers($iso2) && ! $zone->isDistrictScoped())
+            ->sortByDesc('priority')
+            ->first();
+
+        if ($countryMatch) {
+            return $countryMatch;
+        }
+
+        // 3. The catch-all: an active zone that lists no countries.
         return $zones
             ->filter(fn (ShippingZone $zone) => $zone->isCatchAll())
             ->sortByDesc('priority')
             ->first();
+    }
+
+    /**
+     * Country-only resolution, kept for callers that have no district.
+     */
+    public function forCountry(string $iso2): ?ShippingZone
+    {
+        return $this->forDestination($iso2);
     }
 
     /**

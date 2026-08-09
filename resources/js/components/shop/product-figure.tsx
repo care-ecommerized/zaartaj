@@ -29,12 +29,13 @@ function hashSlug(slug: string): number {
     return Math.abs(hash);
 }
 
+// Bordeaux & gold placeholder panels, matching the storefront theme.
 const PANELS = [
-    { from: '#0b4f49', to: '#12766e' },
-    { from: '#12766e', to: '#7fc5bc' },
-    { from: '#0e5f58', to: '#3f9a90' },
-    { from: '#134f4a', to: '#8fcfc6' },
-    { from: '#0b4f49', to: '#2f8b82' },
+    { from: '#591b32', to: '#7b2d4e' },
+    { from: '#7b2d4e', to: '#a84c6d' },
+    { from: '#4a1730', to: '#8a3455' },
+    { from: '#6d2545', to: '#b06a86' },
+    { from: '#591b32', to: '#93395c' },
 ];
 
 interface ProductFigureProps {

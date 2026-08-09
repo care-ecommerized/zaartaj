@@ -5,6 +5,7 @@ namespace App\Payments\Gateways;
 use App\Models\Payment;
 use App\Payments\Contracts\HandlesWebhooks;
 use App\Payments\Contracts\PaymentGateway;
+use App\Payments\Contracts\SupportsEmbeddedCard;
 use App\Payments\Exceptions\PaymentException;
 use App\Payments\PaymentResult;
 use Illuminate\Http\Request;
@@ -12,13 +13,17 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Tap Payments — Charges API (hosted redirect).
+ * Tap Payments — Charges API.
  *
- * Flow: create a charge with source 'src_all' -> redirect to transaction.url ->
- * customer returns to our callback (?tap_id=…) -> GET the charge and confirm
- * status === 'CAPTURED'. Tap also POSTs the charge to our webhook.
+ * Redirect flow: create a charge with source 'src_all' -> redirect to
+ * transaction.url -> customer returns to our callback (?tap_id=…) -> GET the
+ * charge and confirm status === 'CAPTURED'. Tap also POSTs to our webhook.
+ *
+ * Embedded flow: the Tap Card SDK collects and tokenises the card on-page; the
+ * resulting token is charged server-side, which may still require a 3-D Secure
+ * redirect.
  */
-class TapGateway implements HandlesWebhooks, PaymentGateway
+class TapGateway implements HandlesWebhooks, PaymentGateway, SupportsEmbeddedCard
 {
     /** Currencies Tap settles in three decimal places rather than two. */
     private const THREE_DECIMAL = ['KWD', 'BHD', 'OMR'];
@@ -64,6 +69,17 @@ class TapGateway implements HandlesWebhooks, PaymentGateway
         ])->save();
 
         return $url;
+    }
+
+    public function prepareEmbedded(Payment $payment): array
+    {
+        $payment->forceFill(['status' => Payment::STATUS_INITIATED])->save();
+
+        return array_filter([
+            'provider' => 'tap',
+            'publishable_key' => $this->config['publishable_key'],
+            'merchant_id' => $this->config['merchant_id'] ?? null,
+        ]);
     }
 
     public function finalize(Payment $payment, array $callback): PaymentResult

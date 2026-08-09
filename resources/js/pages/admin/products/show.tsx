@@ -1,6 +1,6 @@
-import { Head, Link } from '@inertiajs/react';
+﻿import { Head, Link } from '@inertiajs/react';
 import { ExternalLink } from 'lucide-react';
-import AppLayout from '@/layouts/app-layout';
+import AdminLayout from '@/layouts/admin-layout';
 import { formatTaka } from '@/lib/shop/catalog';
 import { type BreadcrumbItem } from '@/types';
 
@@ -42,7 +42,7 @@ export default function AdminProductShow({ product, images }: Props) {
     ];
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <AdminLayout>
             <Head title={product.title} />
 
             <div className="flex flex-col gap-6 p-4">
@@ -64,8 +64,8 @@ export default function AdminProductShow({ product, images }: Props) {
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     {[
                         { label: 'Status', value: product.status },
-                        { label: 'Brand', value: product.brand ?? '—' },
-                        { label: 'Type', value: product.product_type || '—' },
+                        { label: 'Brand', value: product.brand ?? 'â€”' },
+                        { label: 'Type', value: product.product_type || 'â€”' },
                         { label: 'Stock', value: product.total_inventory },
                     ].map((stat) => (
                         <div key={stat.label} className="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
@@ -118,10 +118,10 @@ export default function AdminProductShow({ product, images }: Props) {
                                 {product.variants.map((variant) => (
                                     <tr key={variant.id} className="border-sidebar-border/70 border-t">
                                         <td className="px-4 py-3">{variant.option1 ?? 'Default'}</td>
-                                        <td className="text-muted-foreground px-4 py-3 font-mono text-xs">{variant.sku ?? '—'}</td>
+                                        <td className="text-muted-foreground px-4 py-3 font-mono text-xs">{variant.sku ?? 'â€”'}</td>
                                         <td className="px-4 py-3 text-right tabular-nums">{formatTaka(Number(variant.price))}</td>
                                         <td className="text-muted-foreground px-4 py-3 text-right tabular-nums">
-                                            {variant.compare_at_price ? formatTaka(Number(variant.compare_at_price)) : '—'}
+                                            {variant.compare_at_price ? formatTaka(Number(variant.compare_at_price)) : 'â€”'}
                                         </td>
                                         <td className="px-4 py-3 text-right tabular-nums">{variant.inventory_quantity}</td>
                                         {/* Zero weight means the courier cannot price this parcel. */}
@@ -160,6 +160,6 @@ export default function AdminProductShow({ product, images }: Props) {
                     </section>
                 )}
             </div>
-        </AppLayout>
+        </AdminLayout>
     );
 }

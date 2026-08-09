@@ -12,9 +12,11 @@ use App\Models\CheckoutSession;
 use App\Models\Order;
 use App\Models\ShippingZone;
 use App\Orders\OrderPresenter;
+use App\Payments\Contracts\SupportsEmbeddedCard;
 use App\Payments\Exceptions\PaymentException;
 use App\Payments\PaymentGatewayManager;
 use App\Payments\PaymentInitiator;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -60,6 +62,15 @@ class CheckoutController extends Controller
                 ->values(),
             'baseCurrency' => config('payment.currency'),
             'exchangeRates' => config('payment.exchange_rates'),
+            // Methods whose card form is embedded on-page, with the publishable
+            // key their browser SDK needs. Absent => that method redirects.
+            'cardGateways' => collect(config('checkout.payment_methods'))
+                ->filter(fn (string $value) => $this->gateways->supportsEmbeddedCard($value))
+                ->mapWithKeys(fn (string $value) => [$value => [
+                    'provider' => config("payment.gateways.{$value}.driver"),
+                    'publishable_key' => config("payment.gateways.{$value}.publishable_key"),
+                ]])
+                ->all(),
             'shipping' => config('checkout.shipping'),
             'dhakaDistricts' => config('checkout.dhaka_districts'),
             'prefill' => $request->user()?->only(['name', 'email']),
@@ -225,6 +236,69 @@ class CheckoutController extends Controller
             ]);
         }
 
+        $this->afterPlaced($request, $order);
+
+        if ($request->paymentMethod() === PaymentMethod::CashOnDelivery) {
+            return redirect()->route('checkout.confirmation', $order);
+        }
+
+        return $this->beginOnlinePayment($request, $order);
+    }
+
+    /**
+     * Place the order for an embedded (on-page) card payment and return the
+     * client-side config the browser SDK needs. The card is collected and
+     * confirmed in the browser; the order settles when the payment confirms.
+     */
+    public function card(StoreCheckoutRequest $request): JsonResponse
+    {
+        $gateway = $request->paymentMethod()->gateway();
+
+        if (! $gateway || ! $this->gateways->driver($gateway) instanceof SupportsEmbeddedCard) {
+            return response()->json(['message' => 'This method does not support on-page card entry.'], 422);
+        }
+
+        try {
+            $order = $this->checkout->place(
+                $request->input('items'),
+                $request->input('customer'),
+                $request->paymentMethod(),
+                $request->user()?->id,
+                $request->session()->get('checkout.coupon'),
+            );
+        } catch (CheckoutException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'errors' => ['checkout' => [$e->getMessage()], ...array_map(fn ($m) => [$m], $this->lineErrorBag($e))],
+            ], 422);
+        }
+
+        $this->afterPlaced($request, $order);
+
+        try {
+            $config = $this->initiator->startEmbeddedForOrder($order, $gateway, $request->user()?->id);
+        } catch (PaymentException $e) {
+            Log::error('Embedded card setup failed', ['order' => $order->order_number, 'error' => $e->getMessage()]);
+
+            return response()->json([
+                'message' => 'We could not start the card payment. Please try another method.',
+                'confirmation_url' => route('checkout.confirmation', $order),
+            ], 422);
+        }
+
+        return response()->json([
+            'confirmation_url' => route('checkout.confirmation', $order),
+            'reconcile_url' => route('payments.reconcile', $config['payment_id']),
+            ...$config,
+        ]);
+    }
+
+    /**
+     * Bookkeeping common to both order-placing paths: convert the captured
+     * session, drop the redeemed coupon, and let a guest reach the confirmation.
+     */
+    private function afterPlaced(Request $request, Order $order): void
+    {
         // Tie the browser's captured session (if any) to the placed order, so the
         // sweep never chases a checkout that actually converted.
         if ($token = $request->cookie('checkout_token')) {
@@ -236,12 +310,6 @@ class CheckoutController extends Controller
 
         // Lets a guest reach the confirmation page for the order they just placed.
         $request->session()->put('recent_order', $order->order_number);
-
-        if ($request->paymentMethod() === PaymentMethod::CashOnDelivery) {
-            return redirect()->route('checkout.confirmation', $order);
-        }
-
-        return $this->beginOnlinePayment($request, $order);
     }
 
     /**
@@ -313,6 +381,9 @@ class CheckoutController extends Controller
             ->get()
             ->map(fn (ShippingZone $zone) => [
                 'countries' => array_map('strtoupper', $zone->countries ?? []),
+                // District scope (e.g. inside Dhaka), so the client mirrors the
+                // server's country+district resolution. Empty = country-wide.
+                'districts' => array_map('strtolower', $zone->districts ?? []),
                 'priority' => $zone->priority,
                 'rates' => $zone->rates
                     ->sortByDesc('priority')

@@ -5,6 +5,7 @@ namespace App\Payments;
 use App\Models\Currency;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Payments\Contracts\SupportsEmbeddedCard;
 use App\Payments\Exceptions\PaymentException;
 use Illuminate\Support\Str;
 
@@ -51,17 +52,69 @@ class PaymentInitiator
     }
 
     /**
+     * Begin an embedded (on-page) card payment for a placed order.
+     *
+     * Returns the client-side config the browser SDK needs to collect the card,
+     * plus our payment id so the frontend can settle it once the card confirms.
+     *
+     * @return array<string, mixed>
+     *
+     * @throws PaymentException
+     */
+    public function startEmbeddedForOrder(Order $order, string $gateway, ?int $userId): array
+    {
+        $driver = $this->gateways->driver($gateway);
+
+        if (! $driver instanceof SupportsEmbeddedCard) {
+            throw new PaymentException("Gateway [{$gateway}] does not support embedded card payments.");
+        }
+
+        $payment = $this->createPayment($gateway, (float) $order->total, [
+            'user_id' => $userId,
+            'order_id' => $order->id,
+        ]);
+
+        try {
+            $config = $driver->prepareEmbedded($payment);
+        } catch (PaymentException $e) {
+            $this->failPayment($payment, $e);
+        }
+
+        return [
+            'payment_id' => $payment->id,
+            'reference' => $payment->reference,
+            'amount' => (float) $payment->amount,
+            'currency' => $payment->currency,
+            ...$config,
+        ];
+    }
+
+    /**
      * @param  array<string, mixed>  $attributes  Extra columns for the payment row.
      *
      * @throws PaymentException
      */
     private function start(string $gateway, float $baseAmount, array $attributes): string
     {
+        $payment = $this->createPayment($gateway, $baseAmount, $attributes);
+
+        try {
+            return $this->gateways->driver($gateway)->initiate($payment);
+        } catch (PaymentException $e) {
+            $this->failPayment($payment, $e);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes  Extra columns for the payment row.
+     */
+    private function createPayment(string $gateway, float $baseAmount, array $attributes): Payment
+    {
         $currency = $this->gateways->currencyFor($gateway);
         $amount = $this->gateways->convert($baseAmount, $currency);
         $base = config('payment.currency');
 
-        $payment = Payment::create([
+        return Payment::create([
             'reference' => 'ZT'.now()->format('ymdHis').Str::upper(Str::random(4)),
             'gateway' => $gateway,
             'amount' => $amount,
@@ -69,8 +122,6 @@ class PaymentInitiator
             'status' => Payment::STATUS_PENDING,
             // Keep an audit trail of what the base order total was and the rate
             // we charged at, since amount/currency now describe the foreign leg.
-            // The rate comes from the currencies table (the money authority), not
-            // the legacy config array.
             'meta' => [
                 'base_currency' => $base,
                 'base_amount' => round($baseAmount, 2),
@@ -78,16 +129,20 @@ class PaymentInitiator
             ],
             ...$attributes,
         ]);
+    }
 
-        try {
-            return $this->gateways->driver($gateway)->initiate($payment);
-        } catch (PaymentException $e) {
-            $payment->forceFill([
-                'status' => Payment::STATUS_FAILED,
-                'failure_reason' => $e->getMessage(),
-            ])->save();
+    /**
+     * @return never
+     *
+     * @throws PaymentException
+     */
+    private function failPayment(Payment $payment, PaymentException $e)
+    {
+        $payment->forceFill([
+            'status' => Payment::STATUS_FAILED,
+            'failure_reason' => $e->getMessage(),
+        ])->save();
 
-            throw $e;
-        }
+        throw $e;
     }
 }

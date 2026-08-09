@@ -1,6 +1,6 @@
-import { Head, Link, router } from '@inertiajs/react';
+﻿import { Head, Link, router } from '@inertiajs/react';
 import { Plus, Ticket } from 'lucide-react';
-import AppLayout from '@/layouts/app-layout';
+import AdminLayout from '@/layouts/admin-layout';
 import { type BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Coupons', href: '/admin/coupons' }];
@@ -38,7 +38,7 @@ function formatWindow(coupon: Coupon): string {
     const to = fmt(coupon.ends_at);
 
     if (!from && !to) return 'Always';
-    return `${from ?? '—'} → ${to ?? '—'}`;
+    return `${from ?? 'â€”'} â†’ ${to ?? 'â€”'}`;
 }
 
 export default function AdminCouponIndex({ coupons }: Props) {
@@ -49,7 +49,7 @@ export default function AdminCouponIndex({ coupons }: Props) {
     };
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <AdminLayout>
             <Head title="Coupons" />
 
             <div className="flex flex-col gap-6 p-4">
@@ -91,7 +91,7 @@ export default function AdminCouponIndex({ coupons }: Props) {
                                         </Link>
                                     </td>
                                     <td className="px-4 py-3">{formatValue(coupon)}</td>
-                                    <td className="text-muted-foreground px-4 py-3 tabular-nums">{coupon.min_subtotal ?? '—'}</td>
+                                    <td className="text-muted-foreground px-4 py-3 tabular-nums">{coupon.min_subtotal ?? 'â€”'}</td>
                                     <td className="text-muted-foreground px-4 py-3">{formatWindow(coupon)}</td>
                                     <td className="px-4 py-3 text-right tabular-nums">
                                         {coupon.times_used}
@@ -132,6 +132,6 @@ export default function AdminCouponIndex({ coupons }: Props) {
                     </table>
                 </div>
             </div>
-        </AppLayout>
+        </AdminLayout>
     );
 }

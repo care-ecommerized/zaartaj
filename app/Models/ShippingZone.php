@@ -14,6 +14,7 @@ class ShippingZone extends Model
     protected $fillable = [
         'name',
         'countries',
+        'districts',
         'priority',
         'is_active',
     ];
@@ -25,6 +26,7 @@ class ShippingZone extends Model
     {
         return [
             'countries' => 'array',
+            'districts' => 'array',
             'priority' => 'integer',
             'is_active' => 'boolean',
         ];
@@ -60,5 +62,29 @@ class ShippingZone extends Model
         $codes = array_map('strtoupper', $this->countries ?? []);
 
         return in_array(strtoupper($iso2), $codes, true);
+    }
+
+    /**
+     * Whether this zone is scoped to specific districts within its country.
+     */
+    public function isDistrictScoped(): bool
+    {
+        return ! empty($this->districts);
+    }
+
+    /**
+     * Whether this zone's district scope includes the given district. Matched
+     * case-insensitively. A zone with no districts is country-wide and never
+     * matches here — the resolver treats it as the fallback for the country.
+     */
+    public function coversDistrict(?string $district): bool
+    {
+        if ($district === null || ! $this->isDistrictScoped()) {
+            return false;
+        }
+
+        $names = array_map(fn ($d) => strtolower(trim((string) $d)), $this->districts);
+
+        return in_array(strtolower(trim($district)), $names, true);
     }
 }

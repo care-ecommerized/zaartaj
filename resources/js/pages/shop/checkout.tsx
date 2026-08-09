@@ -1,6 +1,8 @@
 import { router, useForm, usePage } from '@inertiajs/react';
 import { Lock } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import EmbeddedCardPayment, { type CardPayload } from '@/components/shop/embedded-card-payment';
+import { PaymentLogo } from '@/components/shop/payment-logos';
 import { ProductFigure } from '@/components/shop/product-figure';
 import ShopLayout from '@/layouts/shop-layout';
 import { useTranslation } from '@/lib/i18n';
@@ -13,6 +15,13 @@ function readXsrfToken(): string {
     return match ? decodeURIComponent(match[1]) : '';
 }
 
+/** An extra explainer line shown under a method once it is selected. */
+const PAYMENT_NOTES: Record<string, string> = {
+    cod: 'Pay with cash when your order is delivered.',
+    tabby: 'Split in 4 — interest-free.',
+    tamara: 'Pay later in monthly installments.',
+};
+
 interface ShippingRatePreview {
     method: string;
     amount: number;
@@ -23,6 +32,9 @@ interface ShippingRatePreview {
 
 interface ShippingZonePreview {
     countries: string[];
+    // Lowercased district names this zone is scoped to (e.g. ["dhaka"]).
+    // Empty = the zone prices the whole country.
+    districts: string[];
     priority: number;
     rates: ShippingRatePreview[];
 }
@@ -45,6 +57,8 @@ interface CheckoutProps {
     countries: { code: string; name: string }[];
     shippingZones: ShippingZonePreview[];
     paymentMethods: { value: string; label: string; currency: string }[];
+    // Methods whose card form is embedded on-page (keyed by method value).
+    cardGateways: Record<string, { provider: string; publishable_key: string }>;
     baseCurrency: string;
     exchangeRates: Record<string, number>;
     shipping: { inside_dhaka: number; outside_dhaka: number; free_over: number };
@@ -67,6 +81,7 @@ export default function Checkout({
     countries,
     shippingZones,
     paymentMethods,
+    cardGateways,
     baseCurrency,
     exchangeRates,
     prefill,
@@ -128,8 +143,15 @@ export default function Checkout({
             return country ? 0 : null;
         }
 
+        // Mirror the server resolver: a district-scoped zone for this country
+        // wins first (e.g. inside Dhaka), then a country-wide zone, then the
+        // catch-all. District names arrive lowercased from the server.
+        const district = form.data.customer.district.trim().toLowerCase();
+        const covers = (z: ShippingZonePreview) => z.countries.includes(country);
         const zone =
-            shippingZones.find((z) => z.countries.includes(country)) ?? shippingZones.find((z) => z.countries.length === 0);
+            (district ? shippingZones.find((z) => covers(z) && z.districts.includes(district)) : undefined) ??
+            shippingZones.find((z) => covers(z) && z.districts.length === 0) ??
+            shippingZones.find((z) => z.countries.length === 0);
 
         if (!zone) {
             return null;
@@ -152,7 +174,7 @@ export default function Checkout({
         }
 
         return rate.amount;
-    }, [country, subtotal, shippingZones]);
+    }, [country, subtotal, shippingZones, form.data.customer.district]);
 
     // Promo code. The server is the pricing authority — Apply re-prices the bag
     // and resolves the discount there; this only mirrors what it returned. The
@@ -233,7 +255,7 @@ export default function Checkout({
         }, 1500);
 
         return () => window.clearTimeout(handle);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+         
     }, [email, phone, resolvedLines, presentmentCurrency, locale]);
 
     const total = Math.max(0, subtotal + (delivery ?? 0) - discount);
@@ -252,6 +274,16 @@ export default function Checkout({
         }
         return { currency, amount: Math.round((total / rate) * 100) / 100 };
     }, [selectedMethod, baseCurrency, exchangeRates, total]);
+
+    // When the chosen method collects the card on-page, we render its embedded
+    // form and hand over the pay action to it instead of the normal submit.
+    const embeddedCard = cardGateways[form.data.payment_method];
+    const chargeLabel = foreignCharge ? formatMoney(foreignCharge.amount, foreignCharge.currency) : formatMoney(total, baseCurrency);
+    const buildCardPayload = (): CardPayload => ({
+        customer: form.data.customer,
+        payment_method: form.data.payment_method,
+        items: resolvedLines.map((line) => ({ slug: line.slug, size: line.size, quantity: line.quantity })),
+    });
 
     // Laravel validates nested fields as "customer.name"; Inertia's error type only
     // knows the top-level keys, so read the dotted keys through a widened view.
@@ -472,27 +504,54 @@ export default function Checkout({
 
                         <section className="space-y-4">
                             <h2 className="font-display text-zt-ink text-2xl">{t('checkout.payment')}</h2>
-                            <div className="space-y-3">
-                                {paymentMethods.map((method) => (
-                                    <label
-                                        key={method.value}
-                                        className={`flex cursor-pointer items-center gap-3 border px-4 py-3.5 transition-colors ${
-                                            form.data.payment_method === method.value ? 'border-zt-teal bg-zt-teal-mist/40' : 'border-zt-sand'
-                                        }`}
-                                    >
-                                        <input
-                                            type="radio"
-                                            name="payment_method"
-                                            value={method.value}
-                                            checked={form.data.payment_method === method.value}
-                                            onChange={(e) => form.setData('payment_method', e.target.value)}
-                                            className="accent-zt-teal-deep"
-                                        />
-                                        {/* Known methods (cod/bkash/nagad) get a translated label; anything
-                                            server config adds later falls back to its server-supplied label. */}
-                                        <span className="text-zt-ink text-sm">{t(`payment.${method.value}`) !== `payment.${method.value}` ? t(`payment.${method.value}`) : method.label}</span>
-                                    </label>
-                                ))}
+                            <p className="text-zt-muted -mt-2 flex items-center gap-1.5 text-xs">
+                                <Lock className="size-3" /> All transactions are secure and encrypted.
+                            </p>
+
+                            {/* Radio cards, one bordered group per method, with brand badges and
+                                a note panel that opens under the selected method. */}
+                            <div className="border-zt-sand divide-zt-sand divide-y overflow-hidden rounded-sm border">
+                                {paymentMethods.map((method) => {
+                                    const selected = form.data.payment_method === method.value;
+                                    const label = t(`payment.${method.value}`) !== `payment.${method.value}` ? t(`payment.${method.value}`) : method.label;
+                                    const note = PAYMENT_NOTES[method.value];
+                                    const card = cardGateways[method.value];
+
+                                    return (
+                                        <div key={method.value} className={selected ? 'ring-zt-teal relative z-10 ring-1' : ''}>
+                                            <label className={`flex cursor-pointer items-center justify-between gap-3 px-4 py-4 transition-colors ${selected ? 'bg-zt-teal-mist/50' : 'hover:bg-zt-sand/30'}`}>
+                                                <span className="flex items-center gap-3">
+                                                    <input
+                                                        type="radio"
+                                                        name="payment_method"
+                                                        value={method.value}
+                                                        checked={selected}
+                                                        onChange={(e) => form.setData('payment_method', e.target.value)}
+                                                        className="accent-zt-teal-deep size-4"
+                                                    />
+                                                    <span className="text-zt-ink text-sm font-medium">{label}</span>
+                                                </span>
+                                                <PaymentLogo value={method.value} />
+                                            </label>
+
+                                            {/* The selected method reveals its details right below its own row. */}
+                                            {selected && card && (
+                                                <div className="border-zt-sand bg-zt-sand/20 border-t px-4 py-5">
+                                                    <EmbeddedCardPayment
+                                                        provider={card.provider}
+                                                        publishableKey={card.publishable_key}
+                                                        amountLabel={chargeLabel}
+                                                        buildPayload={buildCardPayload}
+                                                        onPaid={clear}
+                                                    />
+                                                </div>
+                                            )}
+                                            {selected && !card && note && (
+                                                <p className="bg-zt-sand/40 text-zt-muted border-zt-sand border-t px-4 py-3 text-center text-xs">{note}</p>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
                             {errors.payment_method && <p className="text-xs text-red-600">{errors.payment_method}</p>}
                         </section>
@@ -594,14 +653,22 @@ export default function Checkout({
                             )}
                         </dl>
 
-                        <button
-                            type="submit"
-                            disabled={form.processing}
-                            className="bg-zt-teal-deep hover:bg-zt-teal mt-8 flex w-full items-center justify-center gap-2 px-8 py-4 text-[0.72rem] font-medium tracking-[0.2em] text-white uppercase transition-colors disabled:opacity-50"
-                        >
-                            <Lock className="size-3.5" />
-                            {form.processing ? t('checkout.placing') : t('checkout.place_order')}
-                        </button>
+                        {embeddedCard ? (
+                            // The embedded card form owns its own pay button (in the
+                            // payment section), so the summary just points to it.
+                            <p className="text-zt-muted mt-8 text-center text-[0.72rem] leading-relaxed">
+                                Enter your card details under Payment to pay {chargeLabel}.
+                            </p>
+                        ) : (
+                            <button
+                                type="submit"
+                                disabled={form.processing}
+                                className="bg-zt-teal-deep hover:bg-zt-teal mt-8 flex w-full items-center justify-center gap-2 px-8 py-4 text-[0.72rem] font-medium tracking-[0.2em] text-white uppercase transition-colors disabled:opacity-50"
+                            >
+                                <Lock className="size-3.5" />
+                                {form.processing ? t('checkout.placing') : t('checkout.place_order')}
+                            </button>
+                        )}
 
                         <p className="text-zt-muted mt-4 text-center text-[0.7rem] leading-relaxed">{t('checkout.terms')}</p>
                     </aside>

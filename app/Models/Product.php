@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class Product extends Model
 {
@@ -24,7 +25,9 @@ class Product extends Model
     protected $fillable = [
         'handle',
         'title',
+        'title_ar',
         'body_html',
+        'body_html_ar',
         'vendor',
         'brand',
         'product_type',
@@ -33,10 +36,15 @@ class Product extends Model
         'status',
         'published_at',
         'seo_title',
+        'seo_title_ar',
         'seo_description',
+        'seo_description_ar',
         'min_price',
         'max_price',
         'total_inventory',
+        'video_disk',
+        'video_path',
+        'video_mime',
     ];
 
     /**
@@ -90,6 +98,35 @@ class Product extends Model
         return $this->hasOne(ProductImage::class)->renderable()->orderBy('position');
     }
 
+    public function hasVideo(): bool
+    {
+        return filled($this->video_disk) && filled($this->video_path);
+    }
+
+    /**
+     * The URL of the uploaded product video, or null when there is none.
+     *
+     * Host-stripped for a local-driver disk for the same reason ProductImage::url()
+     * strips it: Storage::url() builds the host from APP_URL, which would 404 the
+     * clip whenever the site is reached on any other hostname.
+     */
+    public function videoUrl(): ?string
+    {
+        if (! $this->hasVideo()) {
+            return null;
+        }
+
+        $url = Storage::disk($this->video_disk)->url($this->video_path);
+
+        if (config("filesystems.disks.{$this->video_disk}.driver") !== 'local') {
+            return $url;
+        }
+
+        $path = parse_url($url, PHP_URL_PATH);
+
+        return $path === false || $path === null ? $url : $path;
+    }
+
     public function metafields(): HasMany
     {
         return $this->hasMany(ProductMetafield::class);
@@ -124,6 +161,55 @@ class Product extends Model
             'metafieldValues',
             fn (Builder $q) => $q->where('key', $key)->where('value', $value)
         );
+    }
+
+    /**
+     * The title in the active locale, falling back to the English column.
+     *
+     * The `_ar` sibling is only preferred for an Arabic request and only when it
+     * has actually been filled in, so a product that has not been translated yet
+     * still reads correctly in either language.
+     */
+    public function localizedTitle(): string
+    {
+        return $this->localized('title', 'title_ar');
+    }
+
+    /**
+     * The description (HTML) in the active locale, English otherwise.
+     */
+    public function localizedBody(): ?string
+    {
+        return $this->localized('body_html', 'body_html_ar');
+    }
+
+    /**
+     * The SEO title in the active locale, English otherwise.
+     */
+    public function localizedSeoTitle(): ?string
+    {
+        return $this->localized('seo_title', 'seo_title_ar');
+    }
+
+    /**
+     * The SEO description in the active locale, English otherwise.
+     */
+    public function localizedSeoDescription(): ?string
+    {
+        return $this->localized('seo_description', 'seo_description_ar');
+    }
+
+    /**
+     * Return the Arabic sibling for an Arabic request when it is non-empty,
+     * otherwise the base column.
+     */
+    private function localized(string $base, string $arabic): ?string
+    {
+        if (app()->getLocale() === 'ar' && filled($this->{$arabic})) {
+            return $this->{$arabic};
+        }
+
+        return $this->{$base};
     }
 
     /**

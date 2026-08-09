@@ -1,5 +1,5 @@
-import { Head, useForm } from '@inertiajs/react';
-import AppLayout from '@/layouts/app-layout';
+﻿import { Head, useForm } from '@inertiajs/react';
+import AdminLayout from '@/layouts/admin-layout';
 import { CouponForm, type CouponFormData } from '@/components/coupon-form';
 import { type BreadcrumbItem } from '@/types';
 
@@ -39,7 +39,7 @@ export default function AdminCouponEdit({ coupon, types, currencyOptions, baseCu
     };
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <AdminLayout>
             <Head title={`Edit ${coupon.code}`} />
 
             <div className="flex flex-col gap-6 p-4">
@@ -57,6 +57,6 @@ export default function AdminCouponEdit({ coupon, types, currencyOptions, baseCu
                     onSubmit={submit}
                 />
             </div>
-        </AppLayout>
+        </AdminLayout>
     );
 }

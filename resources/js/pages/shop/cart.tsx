@@ -6,15 +6,13 @@ import { useTranslation } from '@/lib/i18n';
 import { useCart } from '@/lib/shop/cart';
 import { formatTaka } from '@/lib/shop/catalog';
 
-const FREE_DELIVERY_THRESHOLD = 15000;
-const DELIVERY_FEE = 120;
-
 export default function CartPage() {
     const { resolvedLines, subtotal, itemCount, setQuantity, remove } = useCart();
     const { t } = useTranslation();
 
-    const delivery = subtotal === 0 || subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE;
-    const total = subtotal + delivery;
+    // Delivery depends on the destination zone, which we only know once the
+    // customer enters an address at checkout — so the bag shows the subtotal as
+    // an estimate and defers the delivery figure rather than guessing a flat fee.
 
     if (resolvedLines.length === 0) {
         return (
@@ -108,19 +106,15 @@ export default function CartPage() {
                             </div>
                             <div className="flex justify-between">
                                 <dt className="text-zt-muted">{t('cart.delivery')}</dt>
-                                <dd className="text-zt-ink">{delivery === 0 ? t('cart.complimentary') : formatTaka(delivery)}</dd>
+                                <dd className="text-zt-muted">{t('cart.delivery_note')}</dd>
                             </div>
                             <div className="border-zt-sand flex justify-between border-t pt-4 text-base">
-                                <dt className="text-zt-ink">{t('cart.total')}</dt>
-                                <dd className="text-zt-ink font-medium">{formatTaka(total)}</dd>
+                                <dt className="text-zt-ink">{t('cart.estimated_total')}</dt>
+                                <dd className="text-zt-ink font-medium">{formatTaka(subtotal)}</dd>
                             </div>
                         </dl>
 
-                        {delivery > 0 && (
-                            <p className="text-zt-muted mt-5 text-xs leading-relaxed">
-                                {t('cart.add_more', { amount: formatTaka(FREE_DELIVERY_THRESHOLD - subtotal) })}
-                            </p>
-                        )}
+                        <p className="text-zt-muted mt-5 text-xs leading-relaxed">{t('cart.delivery_hint')}</p>
 
                         <Link
                             href="/checkout"

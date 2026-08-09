@@ -1,6 +1,6 @@
-import { Head, Link, router } from '@inertiajs/react';
+﻿import { Head, Link, router } from '@inertiajs/react';
 import { Plus, Truck } from 'lucide-react';
-import AppLayout from '@/layouts/app-layout';
+import AdminLayout from '@/layouts/admin-layout';
 import { type BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Shipping', href: '/admin/shipping' }];
@@ -27,7 +27,7 @@ export default function AdminShippingIndex({ zones }: Props) {
     };
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <AdminLayout>
             <Head title="Shipping zones" />
 
             <div className="flex flex-col gap-6 p-4">
@@ -107,6 +107,6 @@ export default function AdminShippingIndex({ zones }: Props) {
                     </table>
                 </div>
             </div>
-        </AppLayout>
+        </AdminLayout>
     );
 }

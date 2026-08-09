@@ -52,7 +52,7 @@ class CheckoutService
             // storefront always supplies a validated country; the fallback only
             // matters for direct service calls that omit it.
             $country = strtoupper((string) ($customer['country'] ?? 'AE'));
-            $shipping = $this->shipping->charge($subtotal, $country, $weight);
+            $shipping = $this->shipping->charge($subtotal, $country, $weight, $customer['district'] ?? null);
 
             // A coupon (if one is applied) is re-resolved here from the DB, never
             // trusting the client. An invalid code throws, rolling the whole order

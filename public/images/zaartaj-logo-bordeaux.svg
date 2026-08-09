@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1360 520" width="1360" height="520" role="img" aria-label="Zaartaj Elegance">
+  <title>Zaartaj Elegance — Bordeaux &amp; Gold</title>
+  <defs>
+    <linearGradient id="gown" x1="0.3" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="#591B32"/>
+      <stop offset="55%" stop-color="#7B2D4E"/>
+      <stop offset="100%" stop-color="#D98BA6"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#C19A3F"/>
+      <stop offset="100%" stop-color="#E7C97A"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background (delete this rect for a transparent logo) -->
+  <rect width="1360" height="520" fill="#FCF5F1"/>
+
+  <!-- ===== Crowned gown mark ===== -->
+  <g transform="translate(150 70)">
+    <!-- crown -->
+    <path d="M120 70 L133 34 L146 58 L160 26 L174 58 L187 34 L200 70 Z" fill="url(#gold)"/>
+    <rect x="120" y="72" width="80" height="13" rx="6" fill="url(#gold)"/>
+
+    <!-- sparkles -->
+    <path d="M80 55 l6 14 14 6 -14 6 -6 14 -6 -14 -14 -6 14 -6 Z" fill="#E7C97A" opacity="0.9"/>
+    <path d="M235 96 l5 11 11 5 -11 5 -5 11 -5 -11 -11 -5 11 -5 Z" fill="#E7C97A" opacity="0.7"/>
+
+    <!-- mannequin stand + bodice -->
+    <circle cx="160" cy="104" r="12" fill="url(#gold)"/>
+    <path d="M160 116 v16" stroke="url(#gold)" stroke-width="9"/>
+    <path d="M126 150 q34 -22 68 0 l9 56 q-43 17 -86 0 Z" fill="url(#gown)"/>
+
+    <!-- flared skirt sweeping right -->
+    <path d="M118 206 q42 17 84 0 L320 440 q-72 27 -150 0 Q92 420 44 452 Q66 320 118 206 Z" fill="url(#gown)"/>
+    <path d="M160 214 Q188 330 300 442" stroke="url(#gold)" stroke-width="7" fill="none" opacity="0.85"/>
+
+    <!-- gold swoosh trailing under the wordmark -->
+    <path d="M300 430 Q640 470 1120 360" stroke="url(#gold)" stroke-width="7" fill="none" opacity="0.9"/>
+    <path d="M1120 360 q34 -8 52 10" stroke="url(#gold)" stroke-width="7" fill="none" opacity="0.9"/>
+  </g>
+
+  <!-- ===== Wordmark ===== -->
+  <g fill="#C19A3F" font-family="'Cormorant Garamond', Georgia, serif">
+    <text x="470" y="270" font-size="200" font-weight="600" letter-spacing="2">Zaartaj</text>
+    <text x="470" y="430" font-size="170" font-weight="400" letter-spacing="4">Elegance</text>
+  </g>
+</svg>

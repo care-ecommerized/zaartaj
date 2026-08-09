@@ -6,7 +6,9 @@ use App\Currency\CurrencyService;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Events\OrderConfirmed;
+use App\Observers\OrderObserver;
 use Database\Factories\OrderFactory;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
+#[ObservedBy([OrderObserver::class])]
 class Order extends Model
 {
     /** @use HasFactory<OrderFactory> */
@@ -136,7 +139,18 @@ class Order extends Model
 
     public function markPaid(): void
     {
+        $wasUnpaid = $this->payment_status !== self::PAYMENT_PAID;
+
         $this->forceFill(['payment_status' => self::PAYMENT_PAID])->save();
+
+        // Record the settlement once — guards against a callback and an IPN/retry
+        // both marking the same order paid and doubling up the timeline.
+        if ($wasUnpaid) {
+            OrderEvent::record($this, 'payment', 'Payment confirmed', [
+                'actor_type' => 'system',
+                'meta' => ['payment_status' => self::PAYMENT_PAID],
+            ]);
+        }
 
         $this->confirm();
     }
@@ -161,6 +175,14 @@ class Order extends Model
     public function shipments(): HasMany
     {
         return $this->hasMany(Shipment::class);
+    }
+
+    /**
+     * The order's activity timeline, newest first.
+     */
+    public function events(): HasMany
+    {
+        return $this->hasMany(OrderEvent::class)->latest()->latest('id');
     }
 
     /**

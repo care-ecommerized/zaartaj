@@ -1,7 +1,7 @@
-import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+﻿import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { UploadCloud } from 'lucide-react';
 import { type FormEvent, useRef } from 'react';
-import AppLayout from '@/layouts/app-layout';
+import AdminLayout from '@/layouts/admin-layout';
 import { type BreadcrumbItem } from '@/types';
 import { ImportStatusBadge, type ImportStatus } from './status-badge';
 
@@ -49,7 +49,7 @@ export default function ImportsIndex({ imports }: Props) {
     };
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <AdminLayout>
             <Head title="Product imports" />
 
             <div className="flex flex-col gap-6 p-4">
@@ -88,7 +88,7 @@ export default function ImportsIndex({ imports }: Props) {
                             className="bg-primary text-primary-foreground inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
                         >
                             <UploadCloud className="size-4" />
-                            {form.processing ? `Uploading… ${form.progress?.percentage ?? 0}%` : 'Upload'}
+                            {form.processing ? `Uploadingâ€¦ ${form.progress?.percentage ?? 0}%` : 'Upload'}
                         </button>
                     </div>
 
@@ -132,7 +132,7 @@ export default function ImportsIndex({ imports }: Props) {
                                     <td className="px-4 py-3 text-right tabular-nums">{row.products_updated}</td>
                                     <td className="px-4 py-3 text-right tabular-nums">{row.images_queued}</td>
                                     <td className={`px-4 py-3 text-right tabular-nums ${row.failures > 0 ? 'text-red-600' : ''}`}>{row.failures}</td>
-                                    <td className="text-muted-foreground px-4 py-3">{row.uploaded_by ?? '—'}</td>
+                                    <td className="text-muted-foreground px-4 py-3">{row.uploaded_by ?? 'â€”'}</td>
                                 </tr>
                             ))}
 
@@ -147,6 +147,6 @@ export default function ImportsIndex({ imports }: Props) {
                     </table>
                 </div>
             </div>
-        </AppLayout>
+        </AdminLayout>
     );
 }

@@ -43,7 +43,15 @@ return [
     |
     */
 
-    'payment_methods' => ['cod', 'bkash', 'nagad', 'stripe', 'tap', 'tabby', 'tamara'],
+    'payment_methods' => ['cod', 'bkash', 'nagad', 'tap', 'tabby', 'tamara'],
+
+    /*
+    | The base/home country, as an ISO-3166 alpha-2 code. Orders shipping here are
+    | "local"; everywhere else is "international". Drives the admin Orders console
+    | region toggle.
+    */
+
+    'local_country' => env('CHECKOUT_LOCAL_COUNTRY', 'AE'),
 
     /*
     | Cap on a single order, as a guard against a runaway cart. In whole Taka.

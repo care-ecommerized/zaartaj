@@ -65,22 +65,39 @@ class CheckoutTest extends TestCase
     }
 
     #[Test]
-    public function delivery_is_charged_by_zone_below_the_free_threshold(): void
+    public function bangladesh_delivery_is_charged_by_district_below_the_free_threshold(): void
     {
-        // A small Bangladesh order sits below the BD zone's free-over threshold
-        // (455 AED) and is charged the seeded BD flat rate of 5 AED. The old
-        // inside/outside-Dhaka split is gone — zones price by country, so both
-        // Dhaka and Sylhet now resolve to the same Bangladesh zone.
+        // A small Bangladesh order sits below the free-over threshold (455 AED)
+        // and is charged by district: inside Dhaka ৳70 (2.12 AED) and outside
+        // Dhaka ৳150 (4.55 AED), both stored in the AED base.
         $this->makeProduct('small-clutch', price: 200, stock: 10);
 
         $this->post('/checkout', $this->payload('small-clutch', quantity: 1, district: 'Dhaka'));
-        $this->assertEquals(5, Order::latest('id')->first()->shipping_total);
+        $this->assertEquals(2.12, Order::latest('id')->first()->shipping_total);
 
         Order::query()->delete();
 
         $this->makeProduct('small-bag', price: 200, stock: 10);
         $this->post('/checkout', $this->payload('small-bag', quantity: 1, district: 'Sylhet'));
-        $this->assertEquals(5, Order::latest('id')->first()->shipping_total);
+        $this->assertEquals(4.55, Order::latest('id')->first()->shipping_total);
+    }
+
+    #[Test]
+    public function delivery_is_priced_by_zone_for_international_destinations(): void
+    {
+        // UAE 25, GCC 200, and everywhere else (catch-all) 500 AED.
+        $this->makeProduct('silk-scarf', price: 200, stock: 30);
+
+        $this->post('/checkout', $this->intlPayload('silk-scarf', 'AE'));
+        $this->assertEquals(25, Order::latest('id')->first()->shipping_total);
+
+        Order::query()->delete();
+        $this->post('/checkout', $this->intlPayload('silk-scarf', 'SA'));
+        $this->assertEquals(200, Order::latest('id')->first()->shipping_total);
+
+        Order::query()->delete();
+        $this->post('/checkout', $this->intlPayload('silk-scarf', 'US'));
+        $this->assertEquals(500, Order::latest('id')->first()->shipping_total);
     }
 
     #[Test]
@@ -209,6 +226,31 @@ class CheckoutTest extends TestCase
             'payment_method' => 'cod',
             'items' => [
                 ['slug' => $slug, 'size' => null, 'quantity' => $quantity],
+            ],
+        ];
+    }
+
+    /**
+     * A checkout payload for an international (non-BD) destination: an E.164-ish
+     * phone and a postcode (required abroad), and no district.
+     *
+     * @return array<string, mixed>
+     */
+    private function intlPayload(string $slug, string $country): array
+    {
+        return [
+            'customer' => [
+                'name' => 'Aisha Rahman',
+                'phone' => '971501234567',
+                'email' => 'aisha@example.com',
+                'address' => 'Villa 12, Jumeirah 1',
+                'country' => $country,
+                'postcode' => '00000',
+                'note' => '',
+            ],
+            'payment_method' => 'cod',
+            'items' => [
+                ['slug' => $slug, 'size' => null, 'quantity' => 1],
             ],
         ];
     }

@@ -122,6 +122,8 @@ return [
             'secret_key' => env('TAP_SECRET_KEY'),
             'publishable_key' => env('TAP_PUBLISHABLE_KEY'),
             'webhook_secret' => env('TAP_WEBHOOK_SECRET'),
+            // Needed by the on-page Tap Card SDK; optional for the redirect flow.
+            'merchant_id' => env('TAP_MERCHANT_ID'),
         ],
 
         'tabby' => [

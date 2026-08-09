@@ -2,8 +2,12 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\OrderStatus;
 use App\Models\Category;
+use App\Models\CheckoutSession;
 use App\Models\Currency;
+use App\Models\Order;
+use App\Models\Setting;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -50,8 +54,14 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
                 'isAdmin' => $request->user()?->is_admin === true,
             ],
+            // Admin-only chrome counters for the admin shell's notifications bell.
+            // Null for guests/customers so the storefront never pays for the query.
+            'adminBadges' => $request->user()?->is_admin === true ? $this->adminBadges() : null,
             // Site chrome: the header and footer render this on every page.
             'shopCategories' => $this->navigationCategories(),
+            // Store identity + contact + socials the footer renders, editable from
+            // the admin Settings screen. Blank values fall back on the frontend.
+            'storeSettings' => $this->storeSettings(),
             // The shopper's active presentment currency and the selector's options.
             'currency' => $this->presentmentCurrency(),
             'currencies' => $this->activeCurrencies(),
@@ -60,7 +70,38 @@ class HandleInertiaRequests extends Middleware
             'locale' => app()->getLocale(),
             'direction' => app()->has('locale_direction') ? (string) app('locale_direction') : 'ltr',
             'translations' => $this->translations(app()->getLocale()),
+            // Public config the Tabby/Tamara promo widgets read on product/cart
+            // pages. Only publishable keys are exposed — never the secret keys.
+            'bnpl' => $this->bnplConfig(),
         ]);
+    }
+
+    /**
+     * Cheap counters for the admin shell's notifications bell: orders awaiting
+     * confirmation and open checkout sessions worth chasing. Guarded to admins by
+     * the caller; wrapped so an unseeded table never breaks a render.
+     *
+     * @return array{pendingOrders: int, openCheckouts: int, total: int}
+     */
+    protected function adminBadges(): array
+    {
+        try {
+            $pendingOrders = Order::query()
+                ->where('status', OrderStatus::Pending->value)
+                ->count();
+
+            $openCheckouts = CheckoutSession::query()
+                ->where('status', CheckoutSession::STATUS_OPEN)
+                ->count();
+
+            return [
+                'pendingOrders' => $pendingOrders,
+                'openCheckouts' => $openCheckouts,
+                'total' => $pendingOrders + $openCheckouts,
+            ];
+        } catch (Throwable) {
+            return ['pendingOrders' => 0, 'openCheckouts' => 0, 'total' => 0];
+        }
     }
 
     /**
@@ -147,6 +188,57 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
+     * Public config for the Tabby/Tamara BNPL promo widgets.
+     *
+     * The widgets quote instalments in the provider's settlement currency, which
+     * is the store's base currency (AED), so product prices need no conversion.
+     * Only the publishable keys go to the client; the secret keys never leave the
+     * server.
+     *
+     * @return array{currency: string, tabby: array{publicKey: string, merchantCode: string}, tamara: array{publicKey: string, country: string, lang: string}}
+     */
+    protected function bnplConfig(): array
+    {
+        return [
+            'currency' => (string) config('payment.gateways.tabby.currency', config('payment.currency')),
+            'tabby' => [
+                'publicKey' => (string) config('payment.gateways.tabby.public_key', ''),
+                'merchantCode' => (string) config('payment.gateways.tabby.merchant_code', ''),
+            ],
+            'tamara' => [
+                'publicKey' => (string) config('payment.gateways.tamara.public_key', ''),
+                'country' => (string) config('payment.gateways.tamara.country', 'AE'),
+                'lang' => app()->getLocale(),
+            ],
+        ];
+    }
+
+    /**
+     * The store identity, contact details and social links the footer renders.
+     *
+     * These mirror the canonical keys the admin Settings screen writes; each
+     * value is a string (empty when unset) so the footer can fall back to its
+     * own defaults for anything the owner has not filled in yet.
+     *
+     * @return array<string, string>
+     */
+    protected function storeSettings(): array
+    {
+        $keys = [
+            'store.name', 'store.email', 'store.phone', 'store.address', 'store.city', 'store.country',
+            'social.facebook', 'social.instagram', 'social.youtube', 'social.linkedin',
+        ];
+
+        try {
+            $map = Setting::many($keys);
+        } catch (Throwable) {
+            $map = [];
+        }
+
+        return array_map(fn ($value) => (string) ($value ?? ''), array_merge(array_fill_keys($keys, ''), $map));
+    }
+
+    /**
      * The shop's categories, in the order config/catalog.php lists them.
      *
      * Every category is shown, including ones nothing has been filed under yet:
@@ -164,10 +256,13 @@ class HandleInertiaRequests extends Middleware
             'shop.nav.categories.'.app()->getLocale(),
             now()->addMinutes(10),
             fn () => Category::navigable()
-                ->get(['name', 'slug'])
+                ->get(['name', 'name_ar', 'slug', 'image_path'])
                 ->map(fn (Category $category) => [
                     'slug' => $category->slug,
-                    'name' => $category->name,
+                    'name' => $category->localizedName(),
+                    // The admin-uploaded photo, if any; the home tiles fall back to
+                    // the bundled house image, then the teal gradient, when null.
+                    'image' => $category->imageUrl(),
                 ])
                 ->values()
                 ->all()

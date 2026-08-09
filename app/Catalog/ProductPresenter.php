@@ -24,10 +24,10 @@ class ProductPresenter
     {
         return [
             'slug' => $product->handle,
-            'name' => $product->title,
+            'name' => $product->localizedTitle(),
             'brand' => $product->brand,
             'category' => $product->category?->slug,
-            'categoryName' => $product->category?->name,
+            'categoryName' => $product->category?->localizedName(),
             'price' => (float) $product->min_price,
             'compareAtPrice' => $this->compareAtPrice($product),
             'material' => $this->material($product),
@@ -49,11 +49,11 @@ class ProductPresenter
 
         return array_merge($this->card($product), [
             // Sanitised at import, so it is safe to render as markup.
-            'description' => $product->body_html,
+            'description' => $product->localizedBody(),
             'blurb' => $this->blurb($product),
             'images' => $product->images
                 ->filter(fn (ProductImage $image) => $image->isRenderable())
-                ->map(fn (ProductImage $image) => ['url' => $image->url(), 'alt' => $image->alt ?? $product->title])
+                ->map(fn (ProductImage $image) => ['url' => $image->url(), 'alt' => $image->alt ?? $product->localizedTitle()])
                 ->values()
                 ->all(),
             'options' => $this->options($product),
@@ -151,11 +151,11 @@ class ProductPresenter
      */
     private function blurb(Product $product): string
     {
-        if (filled($product->seo_description)) {
-            return $product->seo_description;
+        if (filled($product->localizedSeoDescription())) {
+            return $product->localizedSeoDescription();
         }
 
-        return Str::limit(trim(html_entity_decode(strip_tags((string) $product->body_html))), 160);
+        return Str::limit(trim(html_entity_decode(strip_tags((string) $product->localizedBody()))), 160);
     }
 
     /**

@@ -1,7 +1,8 @@
-import { Head, Link, router } from '@inertiajs/react';
-import { UploadCloud } from 'lucide-react';
+﻿import { Head, Link, router } from '@inertiajs/react';
+import { Plus, Trash2, UploadCloud } from 'lucide-react';
 import { useState } from 'react';
-import AppLayout from '@/layouts/app-layout';
+import AdminLayout from '@/layouts/admin-layout';
+import { useTranslation } from '@/lib/i18n';
 import { formatTaka, type Paginated } from '@/lib/shop/catalog';
 import { type BreadcrumbItem } from '@/types';
 
@@ -29,14 +30,21 @@ interface Props {
 }
 
 export default function AdminProductsIndex({ products, filters, statuses, categories }: Props) {
+    const { t } = useTranslation();
     const [search, setSearch] = useState(filters.search ?? '');
 
     const applyFilter = (changes: Record<string, string | undefined>) => {
         router.get('/admin/products', { ...filters, ...changes }, { preserveState: true, preserveScroll: true, replace: true });
     };
 
+    const deleteProduct = (handle: string, title: string) => {
+        if (confirm(`${t('admin.product.delete')} â€œ${title}â€?`)) {
+            router.delete(`/admin/products/${handle}`, { preserveScroll: true });
+        }
+    };
+
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <AdminLayout>
             <Head title="Products" />
 
             <div className="flex flex-col gap-6 p-4">
@@ -46,13 +54,22 @@ export default function AdminProductsIndex({ products, filters, statuses, catego
                         <p className="text-muted-foreground mt-1 text-sm">{products.total} in the catalogue</p>
                     </div>
 
-                    <Link
-                        href="/admin/products/imports"
-                        className="bg-primary text-primary-foreground inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium"
-                    >
-                        <UploadCloud className="size-4" />
-                        Import CSV
-                    </Link>
+                    <div className="flex items-center gap-3">
+                        <Link
+                            href="/admin/products/imports"
+                            className="border-sidebar-border/70 inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium"
+                        >
+                            <UploadCloud className="size-4" />
+                            Import CSV
+                        </Link>
+                        <Link
+                            href="/admin/products/create"
+                            className="bg-primary text-primary-foreground inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium"
+                        >
+                            <Plus className="size-4" />
+                            {t('admin.product.new')}
+                        </Link>
+                    </div>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
@@ -107,6 +124,7 @@ export default function AdminProductsIndex({ products, filters, statuses, catego
                                 <th className="px-4 py-3 font-medium">Status</th>
                                 <th className="px-4 py-3 text-right font-medium">Price</th>
                                 <th className="px-4 py-3 text-right font-medium">Stock</th>
+                                <th className="px-4 py-3" />
                             </tr>
                         </thead>
                         <tbody>
@@ -118,17 +136,20 @@ export default function AdminProductsIndex({ products, filters, statuses, catego
                                                 {product.image && <img src={product.image} alt="" className="size-full object-contain" />}
                                             </div>
                                             <div className="min-w-0">
-                                                <Link href={`/admin/products/${product.handle}`} className="line-clamp-2 font-medium hover:underline">
+                                                <Link
+                                                    href={`/admin/products/${product.handle}/edit`}
+                                                    className="line-clamp-2 font-medium hover:underline"
+                                                >
                                                     {product.title}
                                                 </Link>
                                                 <p className="text-muted-foreground text-xs">
-                                                    {product.brand ?? '—'} · {product.variants_count} variant
+                                                    {product.brand ?? 'â€”'} Â· {product.variants_count} variant
                                                     {product.variants_count === 1 ? '' : 's'}
                                                 </p>
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="text-muted-foreground px-4 py-3">{product.category ?? '—'}</td>
+                                    <td className="text-muted-foreground px-4 py-3">{product.category ?? 'â€”'}</td>
                                     <td className="px-4 py-3">
                                         <span
                                             className={`rounded-full px-2.5 py-1 text-xs font-medium ${
@@ -141,19 +162,29 @@ export default function AdminProductsIndex({ products, filters, statuses, catego
                                         </span>
                                     </td>
                                     <td className="px-4 py-3 text-right tabular-nums">
-                                        {product.min_price ? formatTaka(Number(product.min_price)) : '—'}
+                                        {product.min_price ? formatTaka(Number(product.min_price)) : 'â€”'}
                                     </td>
                                     <td
                                         className={`px-4 py-3 text-right tabular-nums ${product.total_inventory === 0 ? 'text-muted-foreground' : ''}`}
                                     >
                                         {product.total_inventory}
                                     </td>
+                                    <td className="px-4 py-3 text-right">
+                                        <button
+                                            type="button"
+                                            onClick={() => deleteProduct(product.handle, product.title)}
+                                            aria-label={t('admin.product.delete')}
+                                            className="text-muted-foreground hover:text-red-600"
+                                        >
+                                            <Trash2 className="size-4" />
+                                        </button>
+                                    </td>
                                 </tr>
                             ))}
 
                             {products.data.length === 0 && (
                                 <tr>
-                                    <td colSpan={5} className="text-muted-foreground px-4 py-12 text-center">
+                                    <td colSpan={6} className="text-muted-foreground px-4 py-12 text-center">
                                         No products match these filters.
                                     </td>
                                 </tr>
@@ -182,6 +213,6 @@ export default function AdminProductsIndex({ products, filters, statuses, catego
                     </nav>
                 )}
             </div>
-        </AppLayout>
+        </AdminLayout>
     );
 }

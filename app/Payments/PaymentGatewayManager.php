@@ -5,6 +5,7 @@ namespace App\Payments;
 use App\Currency\CurrencyException;
 use App\Currency\CurrencyService;
 use App\Payments\Contracts\PaymentGateway;
+use App\Payments\Contracts\SupportsEmbeddedCard;
 use App\Payments\Exceptions\PaymentException;
 use App\Payments\Gateways\BkashGateway;
 use App\Payments\Gateways\NagadGateway;
@@ -49,6 +50,19 @@ class PaymentGatewayManager
             $this->available(),
             fn (string $name) => ! config("payment.gateways.{$name}.requires_order", false),
         ));
+    }
+
+    /**
+     * Whether a gateway can collect the card on our own page (embedded), rather
+     * than only via a hosted redirect. Non-gateways (e.g. 'cod') are false.
+     */
+    public function supportsEmbeddedCard(string $gateway): bool
+    {
+        try {
+            return $this->driver($gateway) instanceof SupportsEmbeddedCard;
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     /**
