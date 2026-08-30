@@ -7,6 +7,7 @@ use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderEvent;
+use App\Orders\OrderNotifier;
 use App\Orders\OrderPresenter;
 use App\Orders\OrderStateMachine;
 use App\Reports\SalesReport;
@@ -171,6 +172,34 @@ class OrderController extends Controller
         }
 
         return back()->with('status', "Order {$order->order_number} confirmed.");
+    }
+
+    /**
+     * Mark a paid order as refunded and email the customer.
+     *
+     * This records the refund on the payment side (payment_status → refunded) and
+     * on the timeline; it does NOT call the gateway (refund execution is out of
+     * scope). Guarded to paid orders so an unpaid/failed order can't be "refunded".
+     */
+    public function markRefunded(Request $request, Order $order): RedirectResponse
+    {
+        if ($order->payment_status !== Order::PAYMENT_PAID) {
+            throw ValidationException::withMessages([
+                'refund' => "Order {$order->order_number} is not paid, so it cannot be refunded.",
+            ]);
+        }
+
+        $order->forceFill(['payment_status' => Order::PAYMENT_REFUNDED])->save();
+
+        OrderEvent::record($order, 'payment', 'Payment refunded', [
+            'actor_type' => 'staff',
+            'actor_name' => $request->user()?->name,
+            'meta' => ['payment_status' => Order::PAYMENT_REFUNDED],
+        ]);
+
+        app(OrderNotifier::class)->refunded($order);
+
+        return back()->with('status', "Order {$order->order_number} marked refunded.");
     }
 
     /**

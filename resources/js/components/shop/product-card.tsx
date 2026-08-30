@@ -1,11 +1,13 @@
 import { Link } from '@inertiajs/react';
 import { ProductFigure } from '@/components/shop/product-figure';
 import { useTranslation } from '@/lib/i18n';
-import { formatTaka, type ProductCardData } from '@/lib/shop/catalog';
+import { type ProductCardData } from '@/lib/shop/catalog';
+import { usePrice } from '@/lib/shop/use-price';
 import { cn } from '@/lib/utils';
 
 export function ProductCard({ product, className }: { product: ProductCardData; className?: string }) {
     const { t } = useTranslation();
+    const price = usePrice();
 
     return (
         <Link href={`/shop/${product.slug}`} className={cn('group block', className)}>
@@ -39,8 +41,8 @@ export function ProductCard({ product, className }: { product: ProductCardData; 
                     active presentment currency from usePage() props. Left as Taka until then so
                     display stays correct while prices are still stored in Taka. */}
                 <p className="mt-2 flex items-baseline gap-2">
-                    <span className="text-zt-teal text-[0.95rem] font-semibold">{formatTaka(product.price)}</span>
-                    {product.compareAtPrice ? <span className="text-zt-muted/70 text-xs line-through">{formatTaka(product.compareAtPrice)}</span> : null}
+                    <span className="text-zt-teal text-[0.95rem] font-semibold">{price(product.price)}</span>
+                    {product.compareAtPrice ? <span className="text-zt-muted/70 text-xs line-through">{price(product.compareAtPrice)}</span> : null}
                 </p>
             </div>
         </Link>

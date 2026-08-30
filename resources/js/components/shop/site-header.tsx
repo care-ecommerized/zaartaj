@@ -48,7 +48,7 @@ export function SiteHeader() {
                 </button>
 
                 <Link href="/" aria-label={t('header.home_aria')}>
-                    <BrandMark />
+                    <BrandMark className="h-14" />
                 </Link>
 
                 <nav className="hidden items-center gap-8 lg:flex">

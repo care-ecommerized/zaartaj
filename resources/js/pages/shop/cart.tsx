@@ -4,11 +4,12 @@ import { ProductFigure } from '@/components/shop/product-figure';
 import ShopLayout from '@/layouts/shop-layout';
 import { useTranslation } from '@/lib/i18n';
 import { useCart } from '@/lib/shop/cart';
-import { formatTaka } from '@/lib/shop/catalog';
+import { usePrice } from '@/lib/shop/use-price';
 
 export default function CartPage() {
     const { resolvedLines, subtotal, itemCount, setQuantity, remove } = useCart();
     const { t } = useTranslation();
+    const price = usePrice();
 
     // Delivery depends on the destination zone, which we only know once the
     // customer enters an address at checkout — so the bag shows the subtotal as
@@ -53,7 +54,7 @@ export default function CartPage() {
                                                 {line.name}
                                             </Link>
                                             <p className="text-zt-muted mt-1 text-xs tracking-[0.14em] uppercase">{t('cart.size', { size: line.size })}</p>
-                                            <p className="text-zt-muted mt-1 text-sm">{t('cart.each', { price: formatTaka(line.price) })}</p>
+                                            <p className="text-zt-muted mt-1 text-sm">{t('cart.each', { price: price(line.price) })}</p>
                                         </div>
 
                                         <button
@@ -87,7 +88,7 @@ export default function CartPage() {
                                             </button>
                                         </div>
 
-                                        <p className="text-zt-ink text-sm font-medium">{formatTaka(line.lineTotal)}</p>
+                                        <p className="text-zt-ink text-sm font-medium">{price(line.lineTotal)}</p>
                                     </div>
                                 </div>
                             </li>
@@ -102,7 +103,7 @@ export default function CartPage() {
                         <dl className="space-y-4 text-sm">
                             <div className="flex justify-between">
                                 <dt className="text-zt-muted">{t('cart.subtotal')}</dt>
-                                <dd className="text-zt-ink">{formatTaka(subtotal)}</dd>
+                                <dd className="text-zt-ink">{price(subtotal)}</dd>
                             </div>
                             <div className="flex justify-between">
                                 <dt className="text-zt-muted">{t('cart.delivery')}</dt>
@@ -110,7 +111,7 @@ export default function CartPage() {
                             </div>
                             <div className="border-zt-sand flex justify-between border-t pt-4 text-base">
                                 <dt className="text-zt-ink">{t('cart.estimated_total')}</dt>
-                                <dd className="text-zt-ink font-medium">{formatTaka(subtotal)}</dd>
+                                <dd className="text-zt-ink font-medium">{price(subtotal)}</dd>
                             </div>
                         </dl>
 

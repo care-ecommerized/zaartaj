@@ -77,7 +77,7 @@ return [
     'category_rules' => [
         'shoes' => ['shoe', 'footwear', 'heel', 'sandal', 'boot', 'slipper', 'khussa'],
         'bags' => ['bag', 'clutch', 'purse', 'handbag', 'tote', 'satchel', 'wallet'],
-        'jewellery' => ['jewelry', 'jewellery', 'necklace', 'earring', 'bracelet', 'bangle', 'brooch', 'tiara', 'anklet', 'pendant'],
+        'jewellery' => ['jewelry', 'jewellery', 'necklace', 'earring', 'bracelet', 'bangle', 'brooch', 'tiara', 'anklet', 'pendant', 'ring', 'choker', 'chain'],
         'modest-clothes' => ['abaya', 'hijab', 'burqa', 'burkha', 'kaftan', 'caftan', 'jilbab', 'khimar', 'modest', 'niqab', 'shalwar', 'kurta'],
         'gowns' => ['gown', 'dress', 'skirt', 'bridal', 'wedding', 'costume', 'lehenga', 'saree', 'sari'],
     ],

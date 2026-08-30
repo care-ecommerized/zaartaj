@@ -1,5 +1,5 @@
 import { Link, router } from '@inertiajs/react';
-import { Check, ChevronRight, Minus, Plus } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Minus, Plus } from 'lucide-react';
 import { useState } from 'react';
 import BnplWidgets from '@/components/shop/bnpl-widgets';
 import { ProductCard } from '@/components/shop/product-card';
@@ -7,7 +7,8 @@ import { ProductFigure } from '@/components/shop/product-figure';
 import ShopLayout from '@/layouts/shop-layout';
 import { useTranslation } from '@/lib/i18n';
 import { useCart } from '@/lib/shop/cart';
-import { formatTaka, type Product, type ProductCardData } from '@/lib/shop/catalog';
+import { type Product, type ProductCardData } from '@/lib/shop/catalog';
+import { usePrice } from '@/lib/shop/use-price';
 
 interface ProductPageProps {
     product: Product;
@@ -17,6 +18,7 @@ interface ProductPageProps {
 export default function ProductPage({ product, related }: ProductPageProps) {
     const { add } = useCart();
     const { t } = useTranslation();
+    const price = usePrice();
     // Only the first option drives a picker; multi-option products are rare here.
     const choices = product.options[0]?.values ?? [];
     const [choice, setChoice] = useState(choices[0] ?? 'Default');
@@ -54,13 +56,50 @@ export default function ProductPage({ product, related }: ProductPageProps) {
 
                 <div className="mt-8 grid gap-12 lg:grid-cols-2 lg:gap-16">
                     <div>
-                        <div className="bg-zt-sand aspect-[3/4] overflow-hidden">
-                            {gallery[activeImage]?.url ? (
-                                <img
-                                    src={gallery[activeImage].url}
-                                    alt={gallery[activeImage].alt}
-                                    className="h-full w-full object-contain"
-                                />
+                        {/* Sliding gallery: all images sit in one track that slides on
+                            arrow / thumbnail / dot selection. */}
+                        <div className="bg-zt-sand relative aspect-[3/4] overflow-hidden">
+                            {gallery[0]?.url ? (
+                                <>
+                                    <div
+                                        className="flex h-full transition-transform duration-500 ease-out"
+                                        style={{ transform: `translateX(-${activeImage * 100}%)` }}
+                                    >
+                                        {gallery.map((image, index) => (
+                                            <img key={index} src={image.url} alt={image.alt} className="h-full w-full shrink-0 object-contain" />
+                                        ))}
+                                    </div>
+
+                                    {gallery.length > 1 && (
+                                        <>
+                                            <button
+                                                type="button"
+                                                onClick={() => setActiveImage((i) => (i - 1 + gallery.length) % gallery.length)}
+                                                aria-label="Previous image"
+                                                className="text-zt-ink ring-zt-sand hover:bg-zt-teal absolute top-1/2 left-3 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 shadow-md ring-1 transition-colors hover:text-white"
+                                            >
+                                                <ChevronLeft className="size-5" />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setActiveImage((i) => (i + 1) % gallery.length)}
+                                                aria-label="Next image"
+                                                className="text-zt-ink ring-zt-sand hover:bg-zt-teal absolute top-1/2 right-3 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 shadow-md ring-1 transition-colors hover:text-white"
+                                            >
+                                                <ChevronRight className="size-5" />
+                                            </button>
+
+                                            <div className="absolute inset-x-0 bottom-3 flex justify-center gap-2">
+                                                {gallery.map((_, index) => (
+                                                    <span
+                                                        key={index}
+                                                        className={`h-1.5 rounded-full transition-all ${index === activeImage ? 'bg-zt-teal w-5' : 'w-1.5 bg-white/70'}`}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </>
+                                    )}
+                                </>
                             ) : (
                                 <ProductFigure product={product} size="feature" />
                             )}
@@ -91,8 +130,8 @@ export default function ProductPage({ product, related }: ProductPageProps) {
                         <h1 className="font-display text-zt-ink mt-3 text-3xl leading-tight sm:text-4xl">{product.name}</h1>
 
                         <p className="mt-5 flex items-baseline gap-3">
-                            <span className="text-zt-ink text-2xl">{formatTaka(product.price)}</span>
-                            {product.compareAtPrice ? <span className="text-zt-muted/70 text-base line-through">{formatTaka(product.compareAtPrice)}</span> : null}
+                            <span className="text-zt-ink text-2xl">{price(product.price)}</span>
+                            {product.compareAtPrice ? <span className="text-zt-muted/70 text-base line-through">{price(product.compareAtPrice)}</span> : null}
                         </p>
 
                         {/* Tabby / Tamara pay-in-instalments messaging for this price. */}

@@ -10,6 +10,7 @@ use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Orders\OrderNotifier;
 use Illuminate\Support\Facades\DB;
 
 class CheckoutService
@@ -33,7 +34,7 @@ class CheckoutService
             throw new CheckoutException('Your bag is empty.');
         }
 
-        return DB::transaction(function () use ($lines, $customer, $method, $userId, $couponCode) {
+        $order = DB::transaction(function () use ($lines, $customer, $method, $userId, $couponCode) {
             $resolved = $this->resolveLines($lines);
 
             // line_total sits under each entry's 'item'; sum those, not the top level.
@@ -111,6 +112,9 @@ class CheckoutService
                 'payment_method' => $method,
                 'payment_status' => Order::PAYMENT_UNPAID,
                 'note' => $customer['note'] ?? null,
+                // The active UI locale, so a queued order email (which runs
+                // outside the request) speaks the language the shopper ordered in.
+                'locale' => app()->getLocale(),
                 'placed_at' => now(),
             ]);
 
@@ -142,6 +146,13 @@ class CheckoutService
 
             return $order;
         });
+
+        // After the order has committed: invoice the customer and alert the shop.
+        // Kept outside the transaction so a queued mail dispatch (or a mail outage)
+        // never rolls back a placed order.
+        app(OrderNotifier::class)->placed($order);
+
+        return $order;
     }
 
     /**

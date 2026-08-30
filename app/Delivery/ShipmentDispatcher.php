@@ -9,6 +9,7 @@ use App\Enums\OrderStatus;
 use App\Jobs\DispatchShipment;
 use App\Models\Order;
 use App\Models\Shipment;
+use App\Orders\OrderNotifier;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -227,6 +228,12 @@ class ShipmentDispatcher
             return;
         }
 
+        $from = $order->status;
+
         $order->forceFill(['status' => $status])->save();
+
+        // Courier advances (shipped/delivered/returned) bypass the state machine,
+        // so fire the customer email here — only on a genuine move.
+        app(OrderNotifier::class)->statusChanged($order, $from, $status);
     }
 }

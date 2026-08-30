@@ -72,6 +72,8 @@ Route::middleware(['auth', 'admin'])
         // auto-dispatch is on) or book/retry a shipment by hand.
         Route::post('orders/{order}/confirm', [OrderController::class, 'confirm'])->name('orders.confirm');
         Route::post('orders/{order}/dispatch', [OrderController::class, 'dispatchShipment'])->name('orders.dispatch');
+        // Mark a paid order refunded (records it + emails the customer; no gateway call).
+        Route::patch('orders/{order}/refund', [OrderController::class, 'markRefunded'])->name('orders.refund');
 
         // FX management. Staff edit rates by hand and pin them from the live job.
         Route::get('currencies', [CurrencyController::class, 'index'])->name('currencies.index');
