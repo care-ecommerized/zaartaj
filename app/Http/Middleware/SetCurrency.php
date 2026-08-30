@@ -31,23 +31,55 @@ class SetCurrency
     }
 
     /**
-     * The active presentment currency code for this request.
+     * Country → presentment currency. Used when the shopper has not chosen one
+     * explicitly and the request carries a geo country (e.g. Cloudflare's
+     * CF-IPCountry header in production). Countries not listed fall through to
+     * the Taka default.
+     *
+     * @var array<string, string>
+     */
+    private const COUNTRY_CURRENCY = [
+        'BD' => 'BDT',
+        'AE' => 'AED',
+        'SA' => 'SAR',
+        'QA' => 'QAR',
+        'KW' => 'KWD',
+        'OM' => 'OMR',
+        'BH' => 'BHD',
+        'US' => 'USD',
+    ];
+
+    /**
+     * The active presentment currency code for this request, resolved from (in
+     * order): an explicit `?currency=` / cookie choice, the visitor's country
+     * from a CDN geo header, then Taka as the house default.
      */
     private function resolve(Request $request): string
     {
-        $base = $this->baseCode();
+        $active = $this->activeCodes();
 
+        // 1. An explicit choice from the switcher (query param or saved cookie).
         $requested = $request->query('currency') ?? $request->cookie('currency');
 
         if (is_string($requested)) {
             $requested = strtoupper(trim($requested));
 
-            if (in_array($requested, $this->activeCodes(), true)) {
+            if (in_array($requested, $active, true)) {
                 return $requested;
             }
         }
 
-        return $base;
+        // 2. The visitor's country, when a geo header is present (production CDN).
+        $country = strtoupper(trim((string) ($request->header('CF-IPCountry') ?? $request->header('X-Country') ?? '')));
+        $byCountry = self::COUNTRY_CURRENCY[$country] ?? null;
+
+        if ($byCountry !== null && in_array($byCountry, $active, true)) {
+            return $byCountry;
+        }
+
+        // 3. Default to Taka for this Bangladesh-based shop; the config base is
+        //    the last resort if BDT is somehow inactive.
+        return in_array('BDT', $active, true) ? 'BDT' : $this->baseCode();
     }
 
     /**

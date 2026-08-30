@@ -6,6 +6,7 @@ use App\Checkout\CheckoutService;
 use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Orders\OrderNotifier;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -72,11 +73,16 @@ class PaymentSettlementService
             return;
         }
 
+        $from = $order->status;
+
         $order->forceFill([
             'payment_status' => Order::PAYMENT_FAILED,
             'status' => OrderStatus::Cancelled,
         ])->save();
 
         $this->checkout->releaseStock($order);
+
+        // A failed online payment cancels the order — let the customer know.
+        app(OrderNotifier::class)->statusChanged($order, $from, OrderStatus::Cancelled);
     }
 }

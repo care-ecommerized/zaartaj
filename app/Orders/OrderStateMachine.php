@@ -76,6 +76,10 @@ class OrderStateMachine
             'actor_name' => $actorName,
         ]);
 
+        // Email the customer when the new status has customer-facing copy
+        // (cancelled/returned/shipped/delivered). No-op for the rest.
+        app(OrderNotifier::class)->statusChanged($order, $from, $to);
+
         return $order;
     }
 }

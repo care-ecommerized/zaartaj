@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import { ArrowRight, Headset, Quote, ShieldCheck, Sparkles, Star, Truck } from 'lucide-react';
+import { ProductCard } from '@/components/shop/product-card';
 import { ProductCarousel } from '@/components/shop/product-carousel';
 import ShopLayout from '@/layouts/shop-layout';
 import { useTranslation } from '@/lib/i18n';
@@ -35,7 +36,27 @@ interface HomeProps {
     hero: ProductCardData | null;
     newArrivals: ProductCardData[];
     bestSelling: ProductCardData[];
-    featured: ProductCardData[];
+    showcaseGowns: ProductCardData[];
+    showcaseJewellery: ProductCardData[];
+    showcaseBags: ProductCardData[];
+}
+
+/** A 4-piece category showcase: heading + a four-up grid, hidden when empty. */
+function CategoryShowcase({ eyebrow, heading, href, products }: { eyebrow: string; heading: string; href: string; products: ProductCardData[] }) {
+    if (products.length === 0) {
+        return null;
+    }
+
+    return (
+        <section className="mx-auto max-w-7xl px-5 py-16 lg:px-8">
+            <SectionHead eyebrow={eyebrow} heading={heading} href={href} linkLabel="View all" />
+            <div className="mt-10 grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
+                {products.slice(0, 4).map((product) => (
+                    <ProductCard key={product.slug} product={product} />
+                ))}
+            </div>
+        </section>
+    );
 }
 
 /** Small reusable section heading. */
@@ -56,7 +77,7 @@ function SectionHead({ eyebrow, heading, href, linkLabel }: { eyebrow: string; h
     );
 }
 
-export default function Home({ hero, newArrivals, bestSelling, featured }: HomeProps) {
+export default function Home({ hero, newArrivals, bestSelling, showcaseGowns, showcaseJewellery, showcaseBags }: HomeProps) {
     const { shopCategories: categories = [] } = usePage<SharedData>().props;
     const { t, translations } = useTranslation();
     const categoryLabel = (slug: string, name: string) => translations[`category.${slug}`] ?? name;
@@ -68,47 +89,43 @@ export default function Home({ hero, newArrivals, bestSelling, featured }: HomeP
         >
             {/* ============================ Hero ============================ */}
             <section className="bg-zt-teal-deep relative flex min-h-[100svh] w-full items-center overflow-hidden">
-                {hero?.image ? (
-                    <img src={hero.image} alt={hero.name} className="absolute inset-0 h-full w-full object-cover object-[50%_22%]" />
-                ) : (
-                    <div className="from-zt-teal-deep via-zt-teal to-zt-teal-deep absolute inset-0 bg-gradient-to-br" />
-                )}
+                {/* Autoplay background video (muted + playsInline so browsers allow it);
+                    the hero gown image is the poster shown until the video paints. */}
+                <video
+                    className="absolute inset-0 h-full w-full object-cover object-center"
+                    src="/video/groom.mp4"
+                    poster={hero?.image ?? undefined}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    preload="auto"
+                    aria-hidden="true"
+                />
 
-                <div className="from-zt-teal-deep/95 via-zt-teal-deep/60 absolute inset-0 bg-gradient-to-r to-transparent" />
-                <div className="from-zt-teal-deep/80 absolute inset-0 bg-gradient-to-t via-transparent to-transparent" />
+                {/* Even wash keeps the centred text legible over the video, darker at the foot. */}
+                <div className="bg-zt-teal-deep/45 absolute inset-0" />
+                <div className="from-zt-teal-deep/70 absolute inset-0 bg-gradient-to-t via-transparent to-transparent" />
                 <span className="pointer-events-none absolute inset-4 hidden ring-1 ring-zt-gold-light/25 sm:block lg:inset-6" />
 
-                <div className="relative mx-auto w-full max-w-7xl px-6 py-24 lg:px-10">
-                    <div className="max-w-xl">
-                        <p className="text-zt-gold-light text-xs font-medium tracking-[0.28em] uppercase">{t('home.hero.eyebrow')}</p>
-                        <h1 className="font-display mt-6 text-5xl leading-[1.05] text-white drop-shadow-sm sm:text-6xl lg:text-7xl">
-                            {t('home.hero.headline_1')}
-                            <span className="text-zt-gold-light block italic">{t('home.hero.headline_2')}</span>
-                        </h1>
-                        <p className="mt-7 max-w-md text-base leading-relaxed text-white/80">{t('home.hero.body')}</p>
+                {/* Vertical "scroll to explore" cue on the left. */}
+                <span className="absolute bottom-12 left-6 hidden rotate-180 text-[0.6rem] tracking-[0.35em] text-white/70 uppercase [writing-mode:vertical-rl] lg:block">
+                    Scroll to explore
+                </span>
 
-                        <div className="mt-10 flex flex-wrap items-center gap-4">
-                            <Link
-                                href="/shop"
-                                className="bg-zt-gold hover:bg-zt-gold-light inline-flex items-center gap-2 px-8 py-4 text-[0.72rem] font-medium tracking-[0.2em] text-white uppercase transition-colors"
-                            >
-                                {t('home.hero.cta_shop')}
-                                <ArrowRight className="size-4" />
-                            </Link>
-                            <Link
-                                href={hero ? `/shop/${hero.slug}` : '/shop?category=gowns'}
-                                className="inline-flex items-center px-8 py-4 text-[0.72rem] font-medium tracking-[0.2em] text-white uppercase ring-1 ring-white/40 transition-colors hover:bg-white/10"
-                            >
-                                {t('home.hero.cta_view_gown')}
-                            </Link>
-                        </div>
+                {/* Centred title only — no buttons, no paragraph. Nudged below centre
+                    and coloured in the gold button tone. */}
+                <div className="relative mx-auto mt-[18vh] flex w-full max-w-4xl flex-col items-center px-6 text-center">
+                    <div className="flex items-center justify-center gap-4 text-white/90">
+                        <span className="text-[0.6rem] font-medium tracking-[0.26em] uppercase sm:text-xs">Make your wedding dress</span>
+                        <span className="bg-zt-gold hidden h-px w-14 sm:block" />
+                        <span className="text-[0.6rem] font-medium tracking-[0.26em] uppercase sm:text-xs">As unique as your love story</span>
                     </div>
-                </div>
-
-                <div className="absolute inset-x-0 bottom-6 flex justify-center">
-                    <span className="flex h-9 w-6 items-start justify-center rounded-full pt-2 ring-1 ring-white/40">
-                        <span className="h-2 w-0.5 animate-pulse rounded-full bg-white/70" />
-                    </span>
+                    {/* White + gold mixture: white top line, gold bottom line. */}
+                    <h1 className="font-display mt-8 text-5xl leading-[1.02] tracking-[0.06em] text-white uppercase drop-shadow-md sm:text-6xl lg:text-8xl">
+                        Luxury Bridal
+                        <span className="text-zt-gold block">Couture</span>
+                    </h1>
                 </div>
             </section>
 
@@ -168,10 +185,11 @@ export default function Home({ hero, newArrivals, bestSelling, featured }: HomeP
             </section>
 
             {/* ==================== Editorial banner ====================== */}
-            <section className="relative flex min-h-[420px] items-center overflow-hidden lg:min-h-[500px]">
-                <img src="/images/categories/gowns.jpg" alt="" className="absolute inset-0 h-full w-full object-cover object-[50%_25%]" />
-                <div className="from-zt-teal-deep/90 via-zt-teal-deep/50 absolute inset-0 bg-gradient-to-r to-transparent" />
-                <div className="relative mx-auto w-full max-w-7xl px-6 lg:px-10">
+            <section className="relative flex min-h-[70vh] items-end overflow-hidden lg:min-h-[88vh]">
+                <img src="/images/zaartaj.png" alt="Zaartaj bridal gown" className="absolute inset-0 h-full w-full object-cover object-top" />
+                {/* Foot-up wash so the caption reads while the name + gown stay bright above. */}
+                <div className="from-zt-teal-deep/90 via-zt-teal-deep/20 absolute inset-0 bg-gradient-to-t to-transparent" />
+                <div className="relative mx-auto w-full max-w-7xl px-6 pb-12 lg:px-10 lg:pb-16">
                     <div className="max-w-md">
                         <p className="text-zt-gold-light text-xs font-medium tracking-[0.28em] uppercase">The Bridal Edit</p>
                         <h2 className="font-display mt-5 text-4xl leading-tight text-white sm:text-5xl">
@@ -191,21 +209,16 @@ export default function Home({ hero, newArrivals, bestSelling, featured }: HomeP
                 </div>
             </section>
 
-            {/* ==================== Featured products ===================== */}
-            <section className="mx-auto max-w-7xl px-5 py-20 lg:px-8">
-                <SectionHead eyebrow="Statement pieces" heading="Featured" href="/shop" linkLabel="View all" />
-                <div className="mt-12 grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
-                    {featured.slice(0, 4).map((product) => (
-                        <FeaturedTile key={product.slug} product={product} />
-                    ))}
-                </div>
-            </section>
+            {/* ============ Category showcases: 4 gowns / 4 jewellery / 4 bags ============ */}
+            <CategoryShowcase eyebrow="The house" heading="Gowns" href="/shop?category=gowns" products={showcaseGowns} />
+            <CategoryShowcase eyebrow="Finishing touches" heading="Jewellery" href="/shop?category=jewellery" products={showcaseJewellery} />
+            <CategoryShowcase eyebrow="Carried in hand" heading="Bags" href="/shop?category=bags" products={showcaseBags} />
 
             {/* ====================== About Zaartaj ======================= */}
             <section className="bg-zt-sand/40 border-zt-sand border-y">
                 <div className="mx-auto grid max-w-7xl items-center gap-10 px-5 py-20 lg:grid-cols-2 lg:gap-16 lg:px-8">
                     <div className="relative aspect-[4/5] overflow-hidden lg:aspect-[5/6]">
-                        <img src="/images/categories/modest-clothes.jpg" alt="Inside the Zaartaj atelier" className="h-full w-full object-cover" />
+                        <img src="/images/modest.png" alt="Inside the Zaartaj boutique" className="h-full w-full object-cover" />
                         <span className="pointer-events-none absolute inset-4 ring-1 ring-zt-gold-light/40" />
                     </div>
                     <div>
@@ -294,29 +307,5 @@ export default function Home({ hero, newArrivals, bestSelling, featured }: HomeP
                 </div>
             </section>
         </ShopLayout>
-    );
-}
-
-/** A taller, editorial featured tile. */
-function FeaturedTile({ product }: { product: ProductCardData }) {
-    return (
-        <Link href={`/shop/${product.slug}`} className="group block">
-            <div className="bg-zt-sand relative aspect-[3/4] overflow-hidden">
-                {product.image ? (
-                    <img
-                        src={product.image}
-                        alt={product.name}
-                        loading="lazy"
-                        className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                    />
-                ) : (
-                    <div className="from-zt-teal-deep to-zt-teal flex h-full w-full items-center justify-center bg-gradient-to-br">
-                        <span className="font-display text-4xl text-white/80">{product.name.charAt(0)}</span>
-                    </div>
-                )}
-                <span className="bg-zt-gold absolute top-4 left-4 px-3 py-1 text-[0.6rem] font-medium tracking-[0.18em] text-white uppercase">Featured</span>
-            </div>
-            <h3 className="font-display text-zt-ink mt-4 text-lg leading-snug">{product.name}</h3>
-        </Link>
     );
 }

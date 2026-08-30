@@ -111,6 +111,24 @@ export function presentmentAmount(baseAmount: number, currency: PresentmentCurre
 }
 
 /**
+ * Format a Taka-priced catalogue amount in the active presentment currency.
+ *
+ * Product prices are stored in BDT, but presentment converts *out of the base*
+ * (AED). So we first lift the Taka figure to the base by dividing by BDT's
+ * rate-to-base, then present it. When the active currency is BDT this round-trips
+ * back to the original Taka. Falls back to plain Taka when no currency is active.
+ */
+export function formatShopPrice(taka: number, currency?: PresentmentCurrency | null, currencies: PresentmentCurrency[] = []): string {
+    if (!currency) {
+        return formatTaka(taka);
+    }
+
+    const bdtRate = currencies.find((c) => c.code === CURRENCY)?.rate_to_base ?? 33;
+
+    return formatPresentment(taka / bdtRate, currency, currencies);
+}
+
+/**
  * Format a base-currency (AED) amount in the active presentment currency,
  * honouring that currency's decimal precision. BDT keeps its ৳ Taka styling.
  */

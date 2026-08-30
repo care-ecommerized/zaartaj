@@ -8,11 +8,12 @@ import { useState } from 'react';
  * (see LOGO_SRC). If that file is missing the component falls back to the
  * inline SVG below, so the header never depends on an asset being present.
  *
- * The raster artwork carries its own light background, so it is only used for
- * the light-background header (tone 'gold'); the dark teal footer (tone
- * 'light') keeps the transparent, tone-aware inline SVG.
+ * Two transparent PNGs: the bordeaux/gold emblem for light backgrounds (header,
+ * checkout) and an all-white version for the dark footer. Both fall back to the
+ * inline SVG below if the file is ever missing.
  */
 const LOGO_SRC: string | null = '/images/zaartaj-logo.png';
+const LOGO_SRC_LIGHT: string | null = '/images/zaartaj-footer-white.png';
 
 interface BrandMarkProps {
     /** 'full' shows the wordmark; 'mark' shows only the crowned gown. */
@@ -25,11 +26,13 @@ interface BrandMarkProps {
 export function BrandMark({ variant = 'full', tone = 'gold', className }: BrandMarkProps) {
     const [rasterFailed, setRasterFailed] = useState(false);
 
-    // Use the real artwork for the full lockup on light backgrounds only.
-    if (LOGO_SRC && variant === 'full' && tone === 'gold' && !rasterFailed) {
+    // The white emblem for the dark footer, the bordeaux emblem elsewhere.
+    const rasterSrc = tone === 'light' ? LOGO_SRC_LIGHT : LOGO_SRC;
+
+    if (rasterSrc && variant === 'full' && !rasterFailed) {
         return (
             <img
-                src={LOGO_SRC}
+                src={rasterSrc}
                 alt="Zaartaj Elegance"
                 onError={() => setRasterFailed(true)}
                 className={cn('h-12 w-auto', className)}

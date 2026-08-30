@@ -6,6 +6,7 @@ import {
     Package,
     RefreshCw,
     Truck,
+    Undo2,
     User as UserIcon,
     type LucideIcon,
 } from 'lucide-react';
@@ -156,6 +157,13 @@ export default function AdminOrderShow({ order, baseCurrency }: Props) {
         router.post(`/admin/orders/${order.order_number}/dispatch`, {}, { preserveScroll: true });
     };
 
+    const refundOrder = () => {
+        if (!window.confirm(t('admin.order.refund_confirm'))) {
+            return;
+        }
+        router.patch(`/admin/orders/${order.order_number}/refund`, {}, { preserveScroll: true });
+    };
+
     const money = (amount: number) => formatMoney(amount, baseCurrency);
 
     return (
@@ -197,6 +205,16 @@ export default function AdminOrderShow({ order, baseCurrency }: Props) {
                             >
                                 <Truck className="size-4" />
                                 {t('admin.order.send_to_courier')}
+                            </button>
+                        )}
+                        {order.payment_status === 'paid' && (
+                            <button
+                                type="button"
+                                onClick={refundOrder}
+                                className="inline-flex items-center gap-2 rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm font-medium text-amber-700 hover:bg-amber-50"
+                            >
+                                <Undo2 className="size-4" />
+                                {t('admin.order.refund')}
                             </button>
                         )}
                         {order.allowed_transitions.length > 0 && (

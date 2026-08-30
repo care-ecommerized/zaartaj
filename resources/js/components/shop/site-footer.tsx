@@ -45,7 +45,7 @@ export function SiteFooter() {
                 <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-4">
                     {/* 1 — Brand + contact + social */}
                     <div>
-                        <BrandMark tone="light" />
+                        <BrandMark tone="light" className="h-20" />
                         <p className="mt-5 max-w-xs text-sm leading-relaxed text-white/70">{t('footer.tagline')}</p>
 
                         <ul className="mt-6 space-y-3 text-sm text-white/70">

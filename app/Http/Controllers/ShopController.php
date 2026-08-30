@@ -31,20 +31,55 @@ class ShopController extends Controller
         // product with no renderable image is skipped so no blank tile appears.
         $withPhoto = fn (Builder $query): Builder => $query->whereHas('images', fn (Builder $q) => $q->renderable());
 
+        $inStock = fn (Builder $query): Builder => $withPhoto($query)->where('total_inventory', '>', 0);
+
+        // Home-page curation, chosen by the shop owner.
+        // - $hiddenHandles are kept off the home page entirely.
+        // - $newArrivalHandles are the exact pieces shown in "New Arrivals", in
+        //   this order (rather than auto-filling by newest).
+        $hiddenHandles = ['large-green', 'large-maroon', 'dra-small-brown'];
+        $newArrivalHandles = ['black-clutch-evening-bag', 'modern-cloud-clutch-bag', 'wrinkled-heart-evening-clutch', 'retro-heart-chain-party-handbag'];
+
+        $newArrivals = $this->published()
+            ->whereIn('handle', $newArrivalHandles)
+            ->get()
+            ->sortBy(fn ($product) => array_search($product->handle, $newArrivalHandles))
+            ->values();
+
+        // Best-selling: in-stock, excluding the hidden pieces and whatever is
+        // already pinned to New Arrivals, so the two rails never repeat.
+        $bestSelling = $inStock($this->published())
+            ->whereNotIn('handle', array_merge($hiddenHandles, $newArrivalHandles))
+            ->orderByDesc('total_inventory')
+            ->limit(10)
+            ->get();
+
+        // A 4-piece showcase for a top-level category (incl. its descendants), so
+        // the home page tells a first-time visitor what the house sells.
+        $showcase = function (string $slug) use ($withPhoto, $hiddenHandles): array {
+            $category = Category::where('slug', $slug)->first();
+
+            if (! $category) {
+                return [];
+            }
+
+            return $this->cards(
+                $withPhoto($this->published())
+                    ->whereIn('category_id', $this->descendantIds($category))
+                    ->whereNotIn('handle', $hiddenHandles)
+                    ->latest('id')
+                    ->limit(4)
+                    ->get()
+            );
+        };
+
         return Inertia::render('shop/home', [
             'hero' => $hero ? $this->presenter->card($hero) : null,
-            // Newest by id — freshly added products lead this rail.
-            'newArrivals' => $this->cards(
-                $withPhoto($this->published())->latest('id')->limit(12)->get()
-            ),
-            // Highest stock stands in for "best selling" until order data drives it.
-            'bestSelling' => $this->cards(
-                $withPhoto($this->published())->orderByDesc('total_inventory')->limit(12)->get()
-            ),
-            // Statement pieces: the priciest published products.
-            'featured' => $this->cards(
-                $withPhoto($this->published())->orderByDesc('min_price')->limit(8)->get()
-            ),
+            'newArrivals' => $this->cards($newArrivals),
+            'bestSelling' => $this->cards($bestSelling),
+            'showcaseGowns' => $showcase('gowns'),
+            'showcaseJewellery' => $showcase('jewellery'),
+            'showcaseBags' => $showcase('bags'),
         ]);
     }
 

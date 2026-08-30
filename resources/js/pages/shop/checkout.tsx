@@ -1,6 +1,7 @@
-import { router, useForm, usePage } from '@inertiajs/react';
+import { Link, router, useForm, usePage } from '@inertiajs/react';
 import { Lock } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { BrandMark } from '@/components/shop/brand-mark';
 import EmbeddedCardPayment, { type CardPayload } from '@/components/shop/embedded-card-payment';
 import { PaymentLogo } from '@/components/shop/payment-logos';
 import { ProductFigure } from '@/components/shop/product-figure';
@@ -327,6 +328,12 @@ export default function Checkout({
     return (
         <ShopLayout title="Checkout — Zaartaj Elegance">
             <div className="mx-auto max-w-6xl px-5 py-14 lg:px-8">
+                <div className="border-zt-sand mb-10 flex justify-center border-b pb-8">
+                    <Link href="/" aria-label="Zaartaj Elegance — home">
+                        <BrandMark className="h-16" />
+                    </Link>
+                </div>
+
                 <p className="zt-eyebrow">{t('checkout.eyebrow')}</p>
                 <h1 className="font-display text-zt-ink mt-3 text-4xl sm:text-5xl">{t('checkout.heading')}</h1>
 
